@@ -1,40 +1,78 @@
-import { toNano, Address } from '@ton/core';
+import { Address, toNano } from '@ton/core';
 import { JettonMinter } from '../wrappers/JettonMinter';
+import { NetworkProvider } from '@ton/blueprint';
 
-// Configuration
-const JETTON_MINTER_ADDRESS = 'EQ...'; // Replace with deployed minter address
-const MINT_TO_ADDRESS = 'EQ...';        // Replace with recipient address
-const MINT_AMOUNT = 1000000n;           // Amount in base units (1 million tokens with 9 decimals = 1000000 * 10^9)
-const DECIMALS = 9n;
+// ============ НАСТРОЙКИ МИНТА ============
+// Вставьте сюда адрес задеплоенного контракта
+const JETTON_MINTER_ADDRESS = 'EQxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
 
-async function main() {
-    console.log('=== Jetton Mint Script ===\n');
-    
-    const jettonAmount = MINT_AMOUNT * (10n ** DECIMALS);
-    
-    console.log('📋 Mint Parameters:');
-    console.log(`   Minter Address: ${JETTON_MINTER_ADDRESS}`);
-    console.log(`   Recipient: ${MINT_TO_ADDRESS}`);
-    console.log(`   Amount: ${MINT_AMOUNT} tokens (${jettonAmount} base units)\n`);
-    
-    console.log('To mint tokens, integrate with your wallet:\n');
-    console.log('```typescript');
-    console.log('const minter = JettonMinter.createFromAddress(');
-    console.log(`    Address.parse('${JETTON_MINTER_ADDRESS}')`);
-    console.log(');');
+// Количество токенов для минта (в обычных единицах, не nano)
+const MINT_AMOUNT = 1_000_000; // 1 миллион токенов
+
+// Адрес получателя (оставьте пустым чтобы минтить себе)
+const RECIPIENT_ADDRESS = ''; 
+// ==========================================
+
+export async function run(provider: NetworkProvider) {
+    const sender = provider.sender();
+    const senderAddress = sender.address!;
+
+    // Определяем получателя
+    const recipientAddress = RECIPIENT_ADDRESS 
+        ? Address.parse(RECIPIENT_ADDRESS) 
+        : senderAddress;
+
+    // Конвертируем в nano (9 decimals)
+    const jettonAmount = BigInt(MINT_AMOUNT) * 1_000_000_000n;
+
     console.log('');
-    console.log('await minter.sendMint(provider, sender, {');
-    console.log(`    toAddress: Address.parse('${MINT_TO_ADDRESS}'),`);
-    console.log(`    jettonAmount: ${jettonAmount}n,`);
-    console.log('    forwardTonAmount: toNano("0.01"),');
-    console.log('    totalTonAmount: toNano("0.05"),');
-    console.log('});');
-    console.log('```\n');
-    
-    console.log('Required transaction value: ~0.1 TON');
-    console.log('(includes gas for wallet deployment if needed)\n');
-    
-    console.log('📝 Note: Only the admin can mint tokens!');
-}
+    console.log('='.repeat(50));
+    console.log('💰 Минт Jetton токенов');
+    console.log('='.repeat(50));
+    console.log('');
+    console.log(`📍 Minter: ${JETTON_MINTER_ADDRESS}`);
+    console.log(`👤 Получатель: ${recipientAddress}`);
+    console.log(`💎 Количество: ${MINT_AMOUNT.toLocaleString()} токенов`);
+    console.log('');
 
-main().catch(console.error);
+    if (JETTON_MINTER_ADDRESS.startsWith('EQxx')) {
+        console.log('❌ ОШИБКА: Установите правильный JETTON_MINTER_ADDRESS в scripts/mintJettons.ts');
+        console.log('');
+        return;
+    }
+
+    const minter = provider.open(
+        JettonMinter.createFromAddress(Address.parse(JETTON_MINTER_ADDRESS))
+    );
+
+    // Проверяем что мы админ
+    const data = await minter.getJettonData();
+    if (!data.adminAddress.equals(senderAddress)) {
+        console.log('❌ ОШИБКА: Вы не являетесь админом этого контракта!');
+        console.log(`   Админ: ${data.adminAddress}`);
+        console.log(`   Вы: ${senderAddress}`);
+        return;
+    }
+
+    console.log('📤 Отправка транзакции...');
+    console.log('');
+
+    await minter.sendMint(sender, {
+        toAddress: recipientAddress,
+        jettonAmount: jettonAmount,
+        forwardTonAmount: toNano('0.01'),
+        totalTonAmount: toNano('0.05'),
+    });
+
+    console.log('✅ Транзакция отправлена!');
+    console.log('');
+    console.log('⏳ Подождите ~15 секунд и проверьте баланс:');
+    
+    const walletAddress = await minter.getWalletAddress(recipientAddress);
+    console.log(`   Jetton Wallet: ${walletAddress}`);
+    console.log('');
+    console.log('🔗 Ссылки:');
+    console.log(`   Testnet: https://testnet.tonviewer.com/${walletAddress}`);
+    console.log(`   Mainnet: https://tonviewer.com/${walletAddress}`);
+    console.log('');
+}

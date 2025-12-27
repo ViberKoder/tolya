@@ -1,9 +1,8 @@
-import { toNano, Address, Cell } from '@ton/core';
+import { Address, toNano } from '@ton/core';
 import { JettonMinter, buildJettonOnchainContent } from '../wrappers/JettonMinter';
-import { compile } from '@ton/blueprint';
-import * as fs from 'fs';
+import { compile, NetworkProvider } from '@ton/blueprint';
 
-// Token metadata for TOLYA
+// ============ НАСТРОЙКИ ТОКЕНА ============
 const JETTON_METADATA = {
     name: 'tolya',
     description: 'TOLYA Token - A Jetton 2.0 on TON',
@@ -11,67 +10,68 @@ const JETTON_METADATA = {
     symbol: 'TOL',
     decimals: '9',
 };
+// ==========================================
 
-async function main() {
-    console.log('=== Jetton 2.0 Deployment Script ===\n');
-    
-    // Check for compiled code
-    const minterCodePath = './build/jetton-minter.cell';
-    const walletCodePath = './build/jetton-wallet.cell';
-    
-    if (!fs.existsSync(minterCodePath) || !fs.existsSync(walletCodePath)) {
-        console.log('⚠️  Compiled contract code not found.');
-        console.log('Please compile contracts first with: npm run compile\n');
-        console.log('Or use Blueprint to compile:');
-        console.log('  npx blueprint build\n');
-        
-        console.log('For manual compilation with func compiler:');
-        console.log('  func -o jetton-minter.fif -SPA imports/stdlib.fc imports/op-codes.fc imports/jetton-params.fc jetton-minter.fc');
-        console.log('  func -o jetton-wallet.fif -SPA imports/stdlib.fc imports/op-codes.fc imports/jetton-params.fc jetton-wallet.fc\n');
-        return;
-    }
-    
-    // Load compiled code
-    const minterCode = Cell.fromBoc(fs.readFileSync(minterCodePath))[0];
-    const walletCode = Cell.fromBoc(fs.readFileSync(walletCodePath))[0];
-    
-    console.log('✅ Compiled contracts loaded');
-    console.log(`   Minter code hash: ${minterCode.hash().toString('hex').slice(0, 16)}...`);
-    console.log(`   Wallet code hash: ${walletCode.hash().toString('hex').slice(0, 16)}...\n`);
-    
-    // Build content cell
-    const content = buildJettonOnchainContent(JETTON_METADATA);
-    
-    console.log('📝 Token Metadata:');
-    console.log(`   Name: ${JETTON_METADATA.name}`);
-    console.log(`   Symbol: ${JETTON_METADATA.symbol}`);
-    console.log(`   Decimals: ${JETTON_METADATA.decimals}`);
-    console.log(`   Description: ${JETTON_METADATA.description}`);
-    console.log(`   Image: ${JETTON_METADATA.image.slice(0, 50)}...\n`);
-    
-    // For actual deployment, you would need to:
-    // 1. Set up wallet connection (TonConnect, mnemonic, etc.)
-    // 2. Create the JettonMinter with admin address
-    // 3. Send deployment transaction
-    
-    console.log('📋 To deploy this contract:\n');
-    console.log('1. Set your admin wallet address');
-    console.log('2. Use TonConnect or configure mnemonic in .env');
-    console.log('3. Run deployment with proper wallet\n');
-    
-    console.log('Example with Blueprint:');
-    console.log('  npx blueprint run deployJettonMinter --network testnet\n');
-    
-    console.log('Or integrate with your deployment pipeline:\n');
-    console.log('```typescript');
-    console.log('const jettonMinter = JettonMinter.createFromConfig({');
-    console.log('    adminAddress: yourWalletAddress,');
-    console.log('    content: content,');
-    console.log('    jettonWalletCode: walletCode,');
-    console.log('}, minterCode);');
+export async function run(provider: NetworkProvider) {
+    // Компилируем контракты
+    const minterCode = await compile('JettonMinter');
+    const walletCode = await compile('JettonWallet');
+
+    // Получаем адрес деплоящего (он будет админом)
+    const deployer = provider.sender();
+    const adminAddress = deployer.address!;
+
     console.log('');
-    console.log('await jettonMinter.sendDeploy(provider, sender, toNano("0.1"));');
-    console.log('```');
-}
+    console.log('='.repeat(50));
+    console.log('🚀 Деплой Jetton 2.0');
+    console.log('='.repeat(50));
+    console.log('');
+    console.log('📝 Метаданные токена:');
+    console.log(`   Название: ${JETTON_METADATA.name}`);
+    console.log(`   Символ: ${JETTON_METADATA.symbol}`);
+    console.log(`   Decimals: ${JETTON_METADATA.decimals}`);
+    console.log('');
+    console.log(`👤 Админ: ${adminAddress}`);
+    console.log('');
 
-main().catch(console.error);
+    // Создаем content cell с метаданными
+    const content = buildJettonOnchainContent(JETTON_METADATA);
+
+    // Создаем контракт
+    const jettonMinter = provider.open(
+        JettonMinter.createFromConfig(
+            {
+                adminAddress: adminAddress,
+                content: content,
+                jettonWalletCode: walletCode,
+            },
+            minterCode
+        )
+    );
+
+    console.log(`📍 Адрес контракта: ${jettonMinter.address}`);
+    console.log('');
+
+    // Деплоим
+    await jettonMinter.sendDeploy(deployer, toNano('0.1'));
+
+    // Ждем деплоя
+    await provider.waitForDeploy(jettonMinter.address);
+
+    console.log('');
+    console.log('✅ Контракт успешно задеплоен!');
+    console.log('');
+    console.log('='.repeat(50));
+    console.log('📋 Информация о контракте:');
+    console.log('='.repeat(50));
+    console.log(`   Адрес: ${jettonMinter.address}`);
+    console.log(`   Админ: ${adminAddress}`);
+    console.log('');
+    console.log('🔗 Ссылки:');
+    console.log(`   Testnet: https://testnet.tonviewer.com/${jettonMinter.address}`);
+    console.log(`   Mainnet: https://tonviewer.com/${jettonMinter.address}`);
+    console.log('');
+    console.log('📌 Следующий шаг - минт токенов:');
+    console.log('   npx blueprint run mintJettons --testnet');
+    console.log('');
+}
