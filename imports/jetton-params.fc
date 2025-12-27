@@ -1,7 +1,10 @@
 ;; Jetton parameters and error codes
 
-int error::unauthorized() asm "401";
-int error::insufficient_balance() asm "402";
-int error::unknown_op() asm "403";
-int error::not_supported() asm "404";
-int error::not_mintable() asm "405";
+int error::unauthorized() asm "73";
+int error::insufficient_balance() asm "74";
+int error::unknown_op() asm "0xffff";
+int error::not_supported() asm "75";
+int error::not_mintable() asm "76";
+int error::discovery_fee_not_matched() asm "77";
+int error::wrong_workchain() asm "333";
+int error::balance_error() asm "47";

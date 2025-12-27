@@ -1,5 +1,25 @@
-;; Standard library functions
+;; Standard library and helpers
 
-int workchain() asm "PUSHINT -1";
-int null() asm "NULL";
-slice my_address() asm "MYADDR";
+;; Built-ins (often implicitly available, but good to define if using bare environment)
+int workchain() asm "0 PUSHINT"; 
+;; Note: standard workchain is 0 (Basechain). 
+;; If you want Masterchain use -1. But usually Jettons are on Basechain.
+;; The previous code had -1. I will use 0 for Basechain as it's standard for tokens.
+
+int equal_slices(slice a, slice b) asm "SDEQ";
+
+;; Load a possibly ref-based payload (Either Cell ^Cell)
+(slice, slice) load_payload(slice s) inline {
+    if (s.preload_uint(1)) { ;; either bit is set, means it's a ref
+        return (s, s~load_ref().begin_parse());
+    }
+    ;; either bit is 0, payload is in the slice
+    s~skip_bits(1);
+    return (s, s);
+}
+
+;; Force a chain ID check
+() force_chain(slice addr) impure {
+  (int wc, _) = parse_std_addr(addr);
+  throw_unless(333, wc == workchain());
+}
