@@ -5,3 +5,5 @@ int error::insufficient_balance() asm "402";
 int error::unknown_op() asm "403";
 int error::not_supported() asm "404";
 int error::not_mintable() asm "405";
+int error::invalid_sender() asm "406";
+int error::bad_request() asm "407";

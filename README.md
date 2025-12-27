@@ -1,36 +1,12 @@
-# TOLYA Jetton 2.0 Contract
+## Jetton (TEP-74) на TON — рабочие FunC контракты
 
-Jetton 2.0 контракт для токена TOLYA в сети TON.
+В этом репозитории лежит **Jetton Minter** и **Jetton Wallet**, совместимые со стандартом Jettons (TEP-74).
 
-## ✅ Что уже готово:
-
-**ВСЕ МЕТАДАННЫЕ УЖЕ ВСТРОЕНЫ В КОНТРАКТ!** 
-
-Я добавил функцию `create_jetton_content()` в контракт, которая автоматически создает все метаданные:
-- **Название**: tolya
-- **Символ**: tol  
-- **Decimals**: 9
-- **Изображение**: https://cache.tonapi.io/imgproxy/QOtsjsEA_bkTPXbfkNlSy4EFhmpad0q0Xb_4dN7ZzyU/rs:fill:500:500:1/g:no/aHR0cHM6Ly9jYWNoZS50b25hcGkuaW8vZG5zL3ByZXZpZXcvdG9seWEudG9uLnBuZw.webp
-
-**Что это значит простыми словами:**
-- Раньше нужно было вручную передавать название, описание, картинку и другие данные при деплое
-- Теперь все это уже написано в коде контракта
-- При деплое используется файл `init-code.fc`, который автоматически устанавливает все метаданные
-- **Вам ничего дополнительно передавать не нужно!** Просто деплойте контракт через `init-code.fc`
-
-## Параметры токена
-
-- **Название**: tolya
-- **Символ**: tol
-- **Decimals**: 9
-- **Начальный supply**: 0 (будет заминчен после деплоя)
-- **Максимальный supply**: 1,000,000 токенов
-
-## Структура проекта
+### Структура проекта
 
 ```
 .
-├── jetton-minter.fc      # Основной контракт минтера (с метаданными внутри!)
+├── jetton-minter.fc      # Jetton Minter (TEP-74)
 ├── jetton-wallet.fc      # Контракт кошелька для токенов
 └── imports/
     ├── stdlib.fc        # Стандартные функции
@@ -38,71 +14,70 @@ Jetton 2.0 контракт для токена TOLYA в сети TON.
     └── jetton-params.fc # Параметры и ошибки
 ```
 
-## Сборка
+### Что важно про деплой
+
+Jetton Minter **обязан** иметь в своём persistent data поле `wallet_code` — это **код контракта Jetton Wallet**.  
+Без этого минтер не сможет корректно:
+- вычислять адреса кошельков
+- деплоить кошельки
+- валидировать `burn_notification`
+
+Поэтому старый подход “деплой через `init-code.fc`” здесь **больше не используется** (см. комментарий в `init-code.fc`).
+
+### Сборка
 
 Для сборки контрактов используйте `func` компилятор:
 
 ```bash
-# Установка func (если еще не установлен)
-# Следуйте инструкциям: https://github.com/ton-blockchain/func
-
-# Компиляция минтера
-func -o jetton-minter.fif -SPA imports/stdlib.fc imports/op-codes.fc imports/jetton-params.fc jetton-minter.fc
-
-# Компиляция кошелька
-func -o jetton-wallet.fif -SPA imports/stdlib.fc imports/op-codes.fc imports/jetton-params.fc jetton-wallet.fc
+# пример (пути и флаги могут отличаться в вашем тулчейне)
+func -o jetton-minter.fif -SPA jetton-minter.fc
+func -o jetton-wallet.fif -SPA jetton-wallet.fc
 ```
 
-## Деплой
+### Деплой (в общих чертах)
 
-1. **Деплой минтера**:
-   - Используйте файл `init-code.fc` для деплоя - метаданные установятся автоматически!
-   - Компилируйте: `func -o init-code.fif -SPA imports/stdlib.fc imports/op-codes.fc imports/jetton-params.fc jetton-minter.fc init-code.fc`
-   - Администратором станет адрес, с которого вы деплоите
-   - Начальный supply будет 0
-   - **Все метаданные (name, description, image, symbol, decimals) уже встроены!**
+1. **Скомпилируйте** `jetton-wallet.fc` и получите `wallet_code` (code cell).
+2. **Скомпилируйте** `jetton-minter.fc` и деплойте его с корректным `data`:
+   - `(total_supply, admin_address, jetton_content, wallet_code, mintable)`
+3. Метаданные (`jetton_content`) — это стандартный TEP-64 content cell (может быть off-chain URL или on-chain dict).
+4. После деплоя админ может менять `jetton_content` через `change_content`.
 
-2. **Минт токенов**:
-   - После деплоя отправьте сообщение `mint` на контракт
-   - Укажите количество: 1,000,000 * 10^9 = 1,000,000,000,000,000 nano-tokens
-   - Укажите адрес получателя
+### Поддерживаемые операции
 
-## Get-методы
+#### Jetton Minter
 
-### Jetton Minter
+- `mint` (admin-only, требует `mintable=1`)
+- `change_admin` (admin-only)
+- `change_content` (admin-only)
+- `set_mintable` (admin-only)
+- `provide_wallet_address` (TEP-89)
+- `burn_notification` (приходит от Jetton Wallet)
 
-- `get_jetton_data()` - возвращает (total_supply, mintable, jetton_content, -1)
-- `get_total_supply()` - возвращает общий supply
-- `get_mintable()` - возвращает флаг mintable (1 = можно минтить, 0 = нельзя)
-- `get_jetton_content()` - возвращает метаданные токена (name, description, image, symbol, decimals)
-- `get_admin_address()` - возвращает адрес администратора
-- `get_jetton_wallet_address(slice owner_address)` - вычисляет адрес кошелька для владельца
+#### Jetton Wallet
 
-### Jetton Wallet
+- `transfer`
+- `internal_transfer` (приходит от других Jetton Wallet)
+- `burn`
 
-- `get_wallet_data()` - возвращает (balance, -1, -1, -1)
-- `get_balance()` - возвращает баланс токенов
-- `get_owner_address()` - возвращает адрес владельца
-- `get_jetton_master_address()` - возвращает адрес минтера
+### Get-методы
 
-## Операции
+#### Jetton Minter
 
-### Mint (минт токенов)
-- Только администратор может минтить
-- Требует установленного флага `mintable = 1`
-- Для минта 1,000,000 токенов нужно отправить: 1,000,000 * 10^9 = 1,000,000,000,000,000 nano-tokens
+- `get_jetton_data()` → `(total_supply, mintable, admin_address, jetton_content, wallet_code)`
+- `get_wallet_address(owner)` → `jetton_wallet_address`
+- `get_total_supply()`
+- `get_mintable()`
+- `get_jetton_content()`
+- `get_admin_address()`
 
-### Transfer (перевод токенов)
-- Владелец может переводить свои токены
-- Автоматически создает кошелек получателя, если его нет
+#### Jetton Wallet
 
-### Burn (сжигание токенов)
-- Владелец может сжигать свои токены
-- Уменьшает общий supply
+- `get_wallet_data()` → `(balance, owner_address, jetton_master_address, wallet_code)`
+- `get_balance()`
+- `get_owner_address()`
+- `get_jetton_master_address()`
 
-## Примечания
+### Примечания
 
-- Контракт соответствует стандарту Jetton 2.0
-- Все суммы хранятся в nano-tokens (с учетом decimals)
-- 1,000,000 токенов = 1,000,000,000,000,000 nano-tokens (с 9 decimals)
-- **Метаданные уже встроены в контракт через функцию `create_jetton_content()`**
+- Все количества jetton’ов передаются в nano-единицах (в зависимости от ваших `decimals` в `jetton_content`).
+- Если хочешь — могу добавить готовый скрипт деплоя (TypeScript/Blueprint или Fift), который соберёт `wallet_code` и правильно сформирует initial data.

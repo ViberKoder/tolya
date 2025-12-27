@@ -1,5 +1,103 @@
-;; Standard library functions
+;; Minimal stdlib helpers used by contracts in this repo.
+;;
+;; This is NOT the full TON stdlib. It's only what we need for Jetton (TEP-74).
 
-int workchain() asm "PUSHINT -1";
-int null() asm "NULL";
 slice my_address() asm "MYADDR";
+cell my_code() asm "MYCODE";
+
+cell null() asm "NULL";
+
+() throw(int err) impure asm "THROW";
+
+() throw_unless(int err, int cond) inline impure {
+    if (!cond) {
+        throw(err);
+    }
+}
+
+;; addr_none$00
+slice addr_none() inline {
+    return begin_cell().store_uint(0, 2).end_cell().begin_parse();
+}
+
+int get_workchain(slice std_addr) inline {
+    slice s = std_addr;
+    int tag = s~load_uint(2);
+    ;; Expect addr_std$10 only. If it's not, return 0 to avoid hard dependency on error codes.
+    if (tag != 2) {
+        return 0;
+    }
+    return s~load_int(8);
+}
+
+int my_workchain() inline {
+    return get_workchain(my_address());
+}
+
+int slice_hash(slice s) inline {
+    return begin_cell().store_slice(s).end_cell().hash();
+}
+
+int equal_slices(slice a, slice b) inline {
+    return slice_hash(a) == slice_hash(b);
+}
+
+slice make_addr_std(int workchain_id, int addr_hash) inline {
+    return begin_cell()
+        .store_uint(0, 2)          ;; anycast: none
+        .store_int(workchain_id, 8)
+        .store_uint(addr_hash, 256)
+        .end_cell()
+        .begin_parse();
+}
+
+cell build_state_init(cell code, cell data) inline {
+    ;; StateInit TL-B:
+    ;; split_depth:(Maybe (## 5)) special:(Maybe TickTock)
+    ;; code:(Maybe ^Cell) data:(Maybe ^Cell) library:(Maybe ^Cell)
+    builder b = begin_cell();
+    b = b.store_uint(0, 1); ;; split_depth absent
+    b = b.store_uint(0, 1); ;; special absent
+    b = b.store_uint(1, 1).store_ref(code);
+    b = b.store_uint(1, 1).store_ref(data);
+    b = b.store_uint(0, 1); ;; library absent
+    return b.end_cell();
+}
+
+cell build_internal_msg_no_init(slice dest, int value, int bounce, cell body) inline {
+    ;; Internal message (MessageRelaxed) header.
+    ;; Common pattern used by TON examples:
+    ;; - 0x18 = int_msg_info + ihr_disabled=1 + bounce=<bounce> + bounced=0
+    ;; We build body as ref and include state_init if not null.
+    builder b = begin_cell();
+    int hdr = 0x18;
+    if (!bounce) {
+        ;; clear bounce bit (bit #3 in 0x18 layout used by examples)
+        ;; 0x18 = 0b011000; when bounce=0 we use 0x10 = 0b010000
+        hdr = 0x10;
+    }
+    b = b.store_uint(hdr, 6);
+    b = b.store_slice(dest);
+    b = b.store_coins(value);
+    b = b.store_uint(0, 1 + 4 + 4 + 64 + 32); ;; extra currencies none + fees/timestamps = 0
+
+    b = b.store_uint(0, 1);
+
+    b = b.store_uint(1, 1).store_ref(body);
+    return b.end_cell();
+}
+
+cell build_internal_msg_with_init(slice dest, int value, int bounce, cell state_init, cell body) inline {
+    builder b = begin_cell();
+    int hdr = 0x18;
+    if (!bounce) {
+        hdr = 0x10;
+    }
+    b = b.store_uint(hdr, 6);
+    b = b.store_slice(dest);
+    b = b.store_coins(value);
+    b = b.store_uint(0, 1 + 4 + 4 + 64 + 32);
+    b = b.store_uint(1, 1).store_ref(state_init);
+    b = b.store_uint(1, 1).store_ref(body);
+    return b.end_cell();
+}
