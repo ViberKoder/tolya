@@ -1,5 +1,70 @@
-;; Standard library functions
+;; Standard library functions for FunC
 
+;; Primitives
 int workchain() asm "PUSHINT -1";
-int null() asm "NULL";
+int now() asm "NOW";
+int my_balance() asm "BALANCE FIRST";
+int cur_lt() asm "LTIME";
+int block_lt() asm "BLOCKLT";
+
 slice my_address() asm "MYADDR";
+(slice, slice) parse_std_addr(slice s) asm "REWRITESTDADDR";
+
+;; Null values
+forall X -> X null() asm "PUSHNULL";
+int null?(tuple t) asm "ISNULL";
+
+;; Math
+int min(int x, int y) asm "MIN";
+int max(int x, int y) asm "MAX";
+(int, int) minmax(int x, int y) asm "MINMAX";
+int abs(int x) asm "ABS";
+
+;; Slice operations
+int slice_empty?(slice s) asm "SEMPTY";
+int slice_bits(slice s) asm "SBITS";
+int slice_refs(slice s) asm "SREFS";
+int slice_bits_refs(slice s) asm "SBITREFS";
+
+;; Builder operations
+int builder_bits(builder b) asm "BBITS";
+int builder_refs(builder b) asm "BREFS";
+int builder_depth(builder b) asm "BDEPTH";
+
+;; Cell operations
+int cell_hash(cell c) asm "HASHCU";
+int cell_depth(cell c) asm "CDEPTH";
+
+;; Dictionary operations
+(cell, int) udict_get_ref?(cell dict, int key_len, int index) asm(index dict key_len) "DICTUGETREF" "NULLSWAPIFNOT";
+(cell, int) idict_get_ref?(cell dict, int key_len, int index) asm(index dict key_len) "DICTIGETREF" "NULLSWAPIFNOT";
+(cell, int) dict_get_ref?(cell dict, int key_len, slice index) asm(index dict key_len) "DICTGETREF" "NULLSWAPIFNOT";
+
+cell udict_set_ref(cell dict, int key_len, int index, cell value) asm(value index dict key_len) "DICTUSETREF";
+cell idict_set_ref(cell dict, int key_len, int index, cell value) asm(value index dict key_len) "DICTISETREF";
+cell dict_set_ref(cell dict, int key_len, slice index, cell value) asm(value index dict key_len) "DICTSETREF";
+
+;; Tuples
+forall X -> (tuple, ()) ~tpush(tuple t, X value) asm "TPUSH";
+forall X -> (tuple, (X)) ~tpop(tuple t) asm "TPOP";
+
+;; Message sending
+() send_raw_message(cell msg, int mode) impure asm "SENDRAWMSG";
+
+;; Random
+int random() impure asm "RANDU256";
+int rand(int range) impure asm "RAND";
+
+;; Configuration
+cell config_param(int x) asm "CONFIGOPTPARAM";
+
+;; Gas
+int get_gas_fee(int workchain, int bits, int cells, int is_special) asm "GETGASFEE";
+
+;; Address comparison
+int equal_slices(slice a, slice b) asm "SDEQ";
+
+;; Exceptions
+() throw(int excno) impure asm "THROW";
+() throw_if(int excno, int cond) impure asm "THROWIF";
+() throw_unless(int excno, int cond) impure asm "THROWUNLESS";

@@ -3,252 +3,182 @@
 #include "imports/jetton-params.fc";
 
 ;; Jetton 2.0 Minter Contract
-;; Token: tolya (tol)
-;; Supply: 1000000 tokens
-;; Decimals: 9
+;; Storage scheme:
+;; total_supply:Coins admin_address:MsgAddress jetton_content:^Cell jetton_wallet_code:^Cell
 
-(slice, int, cell, int) load_data() inline {
+(int, slice, cell, cell) load_data() inline {
     slice ds = get_data().begin_parse();
     return (
-        ds~load_msg_addr(),  ;; admin_address
-        ds~load_coins(),     ;; total_supply
-        ds~load_ref(),       ;; jetton_content
-        ds~load_uint(1)      ;; mintable
+        ds~load_coins(),        ;; total_supply
+        ds~load_msg_addr(),     ;; admin_address
+        ds~load_ref(),          ;; jetton_content
+        ds~load_ref()           ;; jetton_wallet_code
     );
 }
 
-() save_data(slice admin_address, int total_supply, cell jetton_content, int mintable) impure {
-    builder b = begin_cell();
-    b = b.store_slice(admin_address);
-    b = b.store_coins(total_supply);
-    b = b.store_ref(jetton_content);
-    b = b.store_uint(mintable, 1);
-    set_data(b.end_cell());
+() save_data(int total_supply, slice admin_address, cell jetton_content, cell jetton_wallet_code) impure inline {
+    set_data(begin_cell()
+        .store_coins(total_supply)
+        .store_slice(admin_address)
+        .store_ref(jetton_content)
+        .store_ref(jetton_wallet_code)
+        .end_cell()
+    );
 }
 
-;; Функция для создания метаданных токена (встроена в контракт)
-;; Метаданные хранятся в формате snake_data в словаре
-cell create_jetton_content() inline {
-    ;; name: "tolya" (ключ 0 в словаре)
-    builder name_builder = begin_cell();
-    name_builder = name_builder.store_uint(0, 8); ;; snake_data prefix
-    name_builder = name_builder.store_slice("tolya");
-    cell name_cell = name_builder.end_cell();
+() mint_tokens(slice to_address, cell jetton_wallet_code, int amount, cell master_msg) impure {
+    cell state_init = calculate_jetton_wallet_state_init(to_address, my_address(), jetton_wallet_code);
+    slice to_wallet_address = calculate_jetton_wallet_address(state_init);
     
-    ;; description: "tolya" (ключ 1)
-    builder desc_builder = begin_cell();
-    desc_builder = desc_builder.store_uint(0, 8); ;; snake_data prefix
-    desc_builder = desc_builder.store_slice("tolya");
-    cell desc_cell = desc_builder.end_cell();
+    var msg = begin_cell()
+        .store_uint(0x18, 6)
+        .store_slice(to_wallet_address)
+        .store_coins(amount)
+        .store_uint(4 + 2 + 1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+        .store_ref(state_init)
+        .store_ref(master_msg);
     
-    ;; image: URL (ключ 2)
-    builder image_builder = begin_cell();
-    image_builder = image_builder.store_uint(0, 8); ;; snake_data prefix
-    image_builder = image_builder.store_slice("https://cache.tonapi.io/imgproxy/QOtsjsEA_bkTPXbfkNlSy4EFhmpad0q0Xb_4dN7ZzyU/rs:fill:500:500:1/g:no/aHR0cHM6Ly9jYWNoZS50b25hcGkuaW8vZG5zL3ByZXZpZXcvdG9seWEudG9uLnBuZw.webp");
-    cell image_cell = image_builder.end_cell();
-    
-    ;; symbol: "tol" (ключ 3)
-    builder symbol_builder = begin_cell();
-    symbol_builder = symbol_builder.store_uint(0, 8); ;; snake_data prefix
-    symbol_builder = symbol_builder.store_slice("tol");
-    cell symbol_cell = symbol_builder.end_cell();
-    
-    ;; decimals: 9 (ключ 4)
-    builder decimals_builder = begin_cell();
-    decimals_builder = decimals_builder.store_uint(0, 8); ;; snake_data prefix
-    decimals_builder = decimals_builder.store_uint(9, 8);
-    cell decimals_cell = decimals_builder.end_cell();
-    
-    ;; Создаем словарь (dict) с ключами 0-4 используя правильный синтаксис FunC
-    cell empty_dict = null();
-    cell dict = empty_dict;
-    dict~dict_set(0, name_cell);
-    dict~dict_set(1, desc_cell);
-    dict~dict_set(2, image_cell);
-    dict~dict_set(3, symbol_cell);
-    dict~dict_set(4, decimals_cell);
-    
-    return dict;
+    send_raw_message(msg.end_cell(), 1); ;; pay fees separately, revert on errors
 }
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
     if (in_msg_body.slice_empty?()) { ;; ignore empty messages
         return ();
     }
-
+    
     slice cs = in_msg_full.begin_parse();
     int flags = cs~load_uint(4);
-
+    
     if (flags & 1) { ;; ignore all bounced messages
         return ();
     }
-
     slice sender_address = cs~load_msg_addr();
-
+    
     int op = in_msg_body~load_uint(32);
     int query_id = in_msg_body~load_uint(64);
-
-    var (admin_address, total_supply, jetton_content, mintable) = load_data();
-
-    if (op == op::mint()) {
-        throw_unless(error::unauthorized, equal_slices(sender_address, admin_address));
-        throw_unless(error::not_mintable, mintable);
-
+    
+    (int total_supply, slice admin_address, cell jetton_content, cell jetton_wallet_code) = load_data();
+    
+    if (op == op::mint()) { ;; Mint
+        throw_unless(73, equal_slices(sender_address, admin_address));
+        slice to_address = in_msg_body~load_msg_addr();
         int amount = in_msg_body~load_coins();
-        slice owner_address = in_msg_body~load_msg_addr();
-        int response_destination = in_msg_body~load_int(1);
-        int custom_payload = in_msg_body~load_int(1);
-        slice forward_ton_amount = in_msg_body~load_coins();
-        slice forward_payload = in_msg_body~load_slice_ref();
-
-        total_supply = total_supply + amount;
-        save_data(admin_address, total_supply, jetton_content, mintable);
-
-        slice owner_wallet_address = calculate_user_jetton_wallet_address(workchain(), owner_address, my_address());
-        cell owner_wallet_init = calculate_user_jetton_wallet_init(workchain(), owner_address, my_address());
-
-        cell deploy_message = begin_cell()
-            .store_uint(0x18, 6)
-            .store_slice(owner_wallet_address)
-            .store_coins(forward_ton_amount)
-            .store_uint(4 + 2 + 1, 1 + 4 + 4 + 64 + 32 + 1 + 1 + 1)
-            .store_ref(owner_wallet_init)
-            .store_ref(forward_payload)
-            .end_cell();
-
-        send_raw_message(deploy_message, 1);
-
-        cell internal_transfer = begin_cell()
-            .store_uint(op::internal_transfer(), 32)
-            .store_uint(query_id, 64)
-            .store_coins(amount)
-            .store_slice(null())
-            .store_slice(null())
-            .store_slice(null())
-            .store_uint(0, 1)
-            .end_cell();
-
-        send_raw_message(
-            begin_cell()
-                .store_uint(0x10, 6)
-                .store_slice(owner_wallet_address)
+        cell master_msg = in_msg_body~load_ref();
+        slice master_msg_cs = master_msg.begin_parse();
+        master_msg_cs~skip_bits(32 + 64); ;; op + query_id
+        int jetton_amount = master_msg_cs~load_coins();
+        
+        mint_tokens(to_address, jetton_wallet_code, amount, master_msg);
+        
+        save_data(total_supply + jetton_amount, admin_address, jetton_content, jetton_wallet_code);
+        return ();
+    }
+    
+    if (op == op::burn_notification()) {
+        int jetton_amount = in_msg_body~load_coins();
+        slice from_address = in_msg_body~load_msg_addr();
+        throw_unless(74,
+            equal_slices(calculate_user_jetton_wallet_address(from_address, my_address(), jetton_wallet_code), sender_address)
+        );
+        
+        save_data(total_supply - jetton_amount, admin_address, jetton_content, jetton_wallet_code);
+        
+        slice response_address = in_msg_body~load_msg_addr();
+        if (response_address.preload_uint(2) != 0) {
+            var msg = begin_cell()
+                .store_uint(0x10, 6) ;; nobounce
+                .store_slice(response_address)
                 .store_coins(0)
-                .store_uint(1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-                .store_ref(internal_transfer)
-                .end_cell(),
-            1
-        );
+                .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+                .store_uint(op::excesses(), 32)
+                .store_uint(query_id, 64);
+            send_raw_message(msg.end_cell(), 2 + 64);
+        }
+        return ();
     }
-    elseif (op == op::change_admin()) {
-        throw_unless(error::unauthorized, equal_slices(sender_address, admin_address));
-        slice new_admin = in_msg_body~load_msg_addr();
-        save_data(new_admin, total_supply, jetton_content, mintable);
-    }
-    elseif (op == op::change_content()) {
-        throw_unless(error::unauthorized, equal_slices(sender_address, admin_address));
-        cell new_content = in_msg_body~load_ref();
-        save_data(admin_address, total_supply, new_content, mintable);
-    }
-    elseif (op == op::burn_notification()) {
-        int amount = in_msg_body~load_coins();
-        total_supply = total_supply - amount;
-        save_data(admin_address, total_supply, jetton_content, mintable);
-    }
-    else {
-        throw(error::unknown_op);
-    }
-}
-
-() recv_external(slice in_msg) impure {
-    slice cs = in_msg.begin_parse();
-    int signature = cs~load_bits(512);
-    slice msg_header = cs~load_bits(8);
-    int op = cs~load_uint(32);
-    int query_id = cs~load_uint(64);
-
-    var (admin_address, total_supply, jetton_content, mintable) = load_data();
-
+    
     if (op == op::provide_wallet_address()) {
-        slice owner_address = cs~load_msg_addr();
-        int response_destination = cs~load_int(1);
-        int custom_payload = cs~load_int(1);
-
-        slice owner_wallet_address = calculate_user_jetton_wallet_address(workchain(), owner_address, my_address());
-
-        send(
-            response_destination,
-            begin_cell()
-                .store_uint(op::take_wallet_address(), 32)
-                .store_uint(query_id, 64)
-                .store_slice(owner_wallet_address)
-                .store_slice(custom_payload)
-                .end_cell(),
-            64 + 32 + 1 + 1
-        );
+        slice owner_address = in_msg_body~load_msg_addr();
+        int include_address? = in_msg_body~load_uint(1);
+        
+        cell included_address = begin_cell().store_uint(0, 2).end_cell();
+        if (include_address?) {
+            included_address = begin_cell().store_slice(owner_address).end_cell();
+        }
+        
+        var msg = begin_cell()
+            .store_uint(0x18, 6)
+            .store_slice(sender_address)
+            .store_coins(0)
+            .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+            .store_uint(op::take_wallet_address(), 32)
+            .store_uint(query_id, 64);
+        
+        if (include_address?) {
+            msg = msg.store_slice(owner_address);
+        }
+        
+        msg = msg.store_slice(calculate_user_jetton_wallet_address(owner_address, my_address(), jetton_wallet_code));
+        
+        send_raw_message(msg.end_cell(), 64);
+        return ();
     }
-    else {
-        throw(error::unknown_op);
+    
+    if (op == op::change_admin()) { ;; Change admin
+        throw_unless(73, equal_slices(sender_address, admin_address));
+        slice new_admin_address = in_msg_body~load_msg_addr();
+        save_data(total_supply, new_admin_address, jetton_content, jetton_wallet_code);
+        return ();
     }
+    
+    if (op == op::change_content()) { ;; Change content
+        throw_unless(73, equal_slices(sender_address, admin_address));
+        save_data(total_supply, admin_address, in_msg_body~load_ref(), jetton_wallet_code);
+        return ();
+    }
+    
+    throw(0xffff);
 }
 
-slice calculate_user_jetton_wallet_address(int workchain, slice owner_address, slice jetton_master_address) inline {
-    cell state_init = calculate_user_jetton_wallet_init(workchain, owner_address, jetton_master_address);
-    int hash = state_init.hash();
+cell calculate_jetton_wallet_state_init(slice owner_address, slice jetton_master_address, cell jetton_wallet_code) inline {
     return begin_cell()
         .store_uint(0, 2)
-        .store_int(workchain, 8)
-        .store_uint(hash, 256)
+        .store_dict(jetton_wallet_code)
+        .store_dict(pack_jetton_wallet_data(0, owner_address, jetton_master_address, jetton_wallet_code))
+        .store_uint(0, 1)
+        .end_cell();
+}
+
+slice calculate_jetton_wallet_address(cell state_init) inline {
+    return begin_cell()
+        .store_uint(4, 3)
+        .store_int(workchain(), 8)
+        .store_uint(cell_hash(state_init), 256)
         .end_cell()
         .begin_parse();
 }
 
-cell calculate_user_jetton_wallet_init(int workchain, slice owner_address, slice jetton_master_address) inline {
+slice calculate_user_jetton_wallet_address(slice owner_address, slice jetton_master_address, cell jetton_wallet_code) inline {
+    return calculate_jetton_wallet_address(calculate_jetton_wallet_state_init(owner_address, jetton_master_address, jetton_wallet_code));
+}
+
+cell pack_jetton_wallet_data(int balance, slice owner_address, slice jetton_master_address, cell jetton_wallet_code) inline {
     return begin_cell()
-        .store_uint(0, 1)
-        .store_int(workchain, 8)
+        .store_coins(balance)
         .store_slice(owner_address)
         .store_slice(jetton_master_address)
+        .store_ref(jetton_wallet_code)
         .end_cell();
 }
 
-(int, int, cell, int) get_jetton_data() method_id {
-    var (admin_address, total_supply, jetton_content, mintable) = load_data();
-    return (
-        total_supply,
-        mintable,
-        jetton_content,
-        -1
-    );
+;; Get methods
+
+(int, int, slice, cell, cell) get_jetton_data() method_id {
+    (int total_supply, slice admin_address, cell jetton_content, cell jetton_wallet_code) = load_data();
+    return (total_supply, -1, admin_address, jetton_content, jetton_wallet_code);
 }
 
-slice get_jetton_wallet_address(slice owner_address) method_id {
-    return calculate_user_jetton_wallet_address(workchain(), owner_address, my_address());
-}
-
-(int) get_total_supply() method_id {
-    var (_, total_supply, _, _) = load_data();
-    return total_supply;
-}
-
-(int) get_mintable() method_id {
-    var (_, _, _, mintable) = load_data();
-    return mintable;
-}
-
-cell get_jetton_content() method_id {
-    var (_, _, jetton_content, _) = load_data();
-    return jetton_content;
-}
-
-slice get_admin_address() method_id {
-    var (admin_address, _, _, _) = load_data();
-    return admin_address;
-}
-
-(int) get_workchain() inline {
-    return -1;
-}
-
-(int) get_my_address() inline {
-    return my_address();
+slice get_wallet_address(slice owner_address) method_id {
+    (int total_supply, slice admin_address, cell jetton_content, cell jetton_wallet_code) = load_data();
+    return calculate_user_jetton_wallet_address(owner_address, my_address(), jetton_wallet_code);
 }

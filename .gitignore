@@ -1,0 +1,39 @@
+# Build artifacts
+build/
+*.fif
+*.boc
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+*.key
+*.mnemonic
+.env
+secrets/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+tmp/

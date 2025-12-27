@@ -1,0 +1,9 @@
+{
+  "name": "My Jetton",
+  "description": "My awesome Jetton token on TON blockchain",
+  "symbol": "MJT",
+  "decimals": "9",
+  "image": "https://example.com/token-image.png",
+  "image_data": "",
+  "attributes": []
+}
