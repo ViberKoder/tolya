@@ -1,0 +1,37 @@
+{
+  "name": "jetton-2.0-ton",
+  "version": "1.0.0",
+  "description": "Jetton 2.0 Token on TON Blockchain (TEP-74)",
+  "main": "index.js",
+  "scripts": {
+    "build": "npx blueprint build",
+    "deploy": "npx blueprint run",
+    "test": "npx jest"
+  },
+  "dependencies": {
+    "@ton/core": "^0.59.0",
+    "@ton/crypto": "^3.3.0",
+    "@ton/ton": "^14.0.0",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@ton/blueprint": "^0.22.0",
+    "@ton/sandbox": "^0.20.0",
+    "@ton/test-utils": "^0.4.2",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.10.2",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  },
+  "keywords": [
+    "ton",
+    "jetton",
+    "token",
+    "blockchain",
+    "tep-74"
+  ],
+  "author": "",
+  "license": "MIT"
+}
