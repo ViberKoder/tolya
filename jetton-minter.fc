@@ -60,13 +60,12 @@ cell create_jetton_content() inline {
     cell decimals_cell = decimals_builder.end_cell();
     
     ;; Создаем словарь (dict) с ключами 0-4 используя правильный синтаксис FunC
-    cell empty_dict = null();
-    cell dict = empty_dict;
-    dict~dict_set(0, name_cell);
-    dict~dict_set(1, desc_cell);
-    dict~dict_set(2, image_cell);
-    dict~dict_set(3, symbol_cell);
-    dict~dict_set(4, decimals_cell);
+    cell dict = new_dict();
+    dict~udict_set(0, name_cell, 256);
+    dict~udict_set(1, desc_cell, 256);
+    dict~udict_set(2, image_cell, 256);
+    dict~udict_set(3, symbol_cell, 256);
+    dict~udict_set(4, decimals_cell, 256);
     
     return dict;
 }
@@ -96,8 +95,16 @@ cell create_jetton_content() inline {
 
         int amount = in_msg_body~load_coins();
         slice owner_address = in_msg_body~load_msg_addr();
-        int response_destination = in_msg_body~load_int(1);
-        int custom_payload = in_msg_body~load_int(1);
+        int response_destination_flag = in_msg_body~load_int(1);
+        slice response_destination = null();
+        if (response_destination_flag) {
+            response_destination = in_msg_body~load_msg_addr();
+        }
+        int custom_payload_flag = in_msg_body~load_int(1);
+        cell custom_payload = null();
+        if (custom_payload_flag) {
+            custom_payload = in_msg_body~load_ref();
+        }
         slice forward_ton_amount = in_msg_body~load_coins();
         slice forward_payload = in_msg_body~load_slice_ref();
 
@@ -118,15 +125,21 @@ cell create_jetton_content() inline {
 
         send_raw_message(deploy_message, 1);
 
-        cell internal_transfer = begin_cell()
-            .store_uint(op::internal_transfer(), 32)
-            .store_uint(query_id, 64)
-            .store_coins(amount)
-            .store_slice(null())
-            .store_slice(null())
-            .store_slice(null())
-            .store_uint(0, 1)
-            .end_cell();
+        builder internal_transfer_builder = begin_cell();
+        internal_transfer_builder = internal_transfer_builder.store_uint(op::internal_transfer(), 32);
+        internal_transfer_builder = internal_transfer_builder.store_uint(query_id, 64);
+        internal_transfer_builder = internal_transfer_builder.store_coins(amount);
+        internal_transfer_builder = internal_transfer_builder.store_int(response_destination_flag, 1);
+        if (response_destination_flag) {
+            internal_transfer_builder = internal_transfer_builder.store_slice(response_destination);
+        }
+        internal_transfer_builder = internal_transfer_builder.store_int(custom_payload_flag, 1);
+        if (custom_payload_flag) {
+            internal_transfer_builder = internal_transfer_builder.store_ref(custom_payload);
+        }
+        internal_transfer_builder = internal_transfer_builder.store_coins(forward_ton_amount);
+        internal_transfer_builder = internal_transfer_builder.store_slice(forward_payload);
+        cell internal_transfer = internal_transfer_builder.end_cell();
 
         send_raw_message(
             begin_cell()
@@ -170,21 +183,34 @@ cell create_jetton_content() inline {
 
     if (op == op::provide_wallet_address()) {
         slice owner_address = cs~load_msg_addr();
-        int response_destination = cs~load_int(1);
-        int custom_payload = cs~load_int(1);
+        int response_destination_flag = cs~load_int(1);
+        slice response_destination = null();
+        if (response_destination_flag) {
+            response_destination = cs~load_msg_addr();
+        }
+        int custom_payload_flag = cs~load_int(1);
+        cell custom_payload = null();
+        if (custom_payload_flag) {
+            custom_payload = cs~load_ref();
+        }
 
         slice owner_wallet_address = calculate_user_jetton_wallet_address(workchain(), owner_address, my_address());
 
-        send(
-            response_destination,
-            begin_cell()
-                .store_uint(op::take_wallet_address(), 32)
-                .store_uint(query_id, 64)
-                .store_slice(owner_wallet_address)
-                .store_slice(custom_payload)
-                .end_cell(),
-            64 + 32 + 1 + 1
-        );
+        if (response_destination_flag) {
+            builder response_builder = begin_cell();
+            response_builder = response_builder.store_uint(op::take_wallet_address(), 32);
+            response_builder = response_builder.store_uint(query_id, 64);
+            response_builder = response_builder.store_slice(owner_wallet_address);
+            response_builder = response_builder.store_int(custom_payload_flag, 1);
+            if (custom_payload_flag) {
+                response_builder = response_builder.store_ref(custom_payload);
+            }
+            send(
+                response_destination,
+                response_builder.end_cell(),
+                64 + 32 + 1 + 1
+            );
+        }
     }
     else {
         throw(error::unknown_op);
@@ -211,13 +237,13 @@ cell calculate_user_jetton_wallet_init(int workchain, slice owner_address, slice
         .end_cell();
 }
 
-(int, int, cell, int) get_jetton_data() method_id {
+(int, int, cell, slice) get_jetton_data() method_id {
     var (admin_address, total_supply, jetton_content, mintable) = load_data();
     return (
         total_supply,
         mintable,
         jetton_content,
-        -1
+        admin_address
     );
 }
 

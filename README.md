@@ -2,21 +2,26 @@
 
 Jetton 2.0 контракт для токена TOLYA в сети TON.
 
-## ✅ Что уже готово:
+## ✅ Что готово:
 
-**ВСЕ МЕТАДАННЫЕ УЖЕ ВСТРОЕНЫ В КОНТРАКТ!** 
+**ПОЛНОСТЬЮ РАБОЧИЙ JETTON 2.0 КОНТРАКТ!**
 
-Я добавил функцию `create_jetton_content()` в контракт, которая автоматически создает все метаданные:
+Контракт полностью соответствует стандарту Jetton 2.0 и готов к использованию:
+
+### Основные возможности:
+- ✅ Минт токенов (только администратором)
+- ✅ Перевод токенов между пользователями
+- ✅ Сжигание токенов
+- ✅ Автоматическое создание кошельков получателей
+- ✅ Полная поддержка стандарта Jetton 2.0
+
+### Метаданные встроены в контракт:
 - **Название**: tolya
 - **Символ**: tol  
 - **Decimals**: 9
 - **Изображение**: https://cache.tonapi.io/imgproxy/QOtsjsEA_bkTPXbfkNlSy4EFhmpad0q0Xb_4dN7ZzyU/rs:fill:500:500:1/g:no/aHR0cHM6Ly9jYWNoZS50b25hcGkuaW8vZG5zL3ByZXZpZXcvdG9seWEudG9uLnBuZw.webp
 
-**Что это значит простыми словами:**
-- Раньше нужно было вручную передавать название, описание, картинку и другие данные при деплое
-- Теперь все это уже написано в коде контракта
-- При деплое используется файл `init-code.fc`, который автоматически устанавливает все метаданные
-- **Вам ничего дополнительно передавать не нужно!** Просто деплойте контракт через `init-code.fc`
+**Все метаданные автоматически устанавливаются при деплое через `init-code.fc`!**
 
 ## Параметры токена
 
@@ -71,7 +76,7 @@ func -o jetton-wallet.fif -SPA imports/stdlib.fc imports/op-codes.fc imports/jet
 
 ### Jetton Minter
 
-- `get_jetton_data()` - возвращает (total_supply, mintable, jetton_content, -1)
+- `get_jetton_data()` - возвращает (total_supply, mintable, jetton_content, admin_address)
 - `get_total_supply()` - возвращает общий supply
 - `get_mintable()` - возвращает флаг mintable (1 = можно минтить, 0 = нельзя)
 - `get_jetton_content()` - возвращает метаданные токена (name, description, image, symbol, decimals)
@@ -80,7 +85,8 @@ func -o jetton-wallet.fif -SPA imports/stdlib.fc imports/op-codes.fc imports/jet
 
 ### Jetton Wallet
 
-- `get_wallet_data()` - возвращает (balance, -1, -1, -1)
+- `get_wallet_data()` - возвращает (balance, owner_address, jetton_master_address, wallet_code)
+- `get_wallet_code()` - возвращает код кошелька
 - `get_balance()` - возвращает баланс токенов
 - `get_owner_address()` - возвращает адрес владельца
 - `get_jetton_master_address()` - возвращает адрес минтера
