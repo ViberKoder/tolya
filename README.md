@@ -1,108 +1,107 @@
-# TOLYA Jetton 2.0 Contract
+# Jetton 2.0 Minter
 
-Jetton 2.0 контракт для токена TOLYA в сети TON.
+Полнофункциональный минтер жетонов версии Jetton 2.0 для сети TON с веб-интерфейсом в стиле ton.org.
 
-## ✅ Что уже готово:
+## ✅ Что включено
 
-**ВСЕ МЕТАДАННЫЕ УЖЕ ВСТРОЕНЫ В КОНТРАКТ!** 
+### Контракты Jetton 2.0
+- ✅ **jetton-minter.fc** - Контракт минтера (официальная версия Jetton 2.0)
+- ✅ **jetton-wallet.fc** - Контракт кошелька (официальная версия Jetton 2.0)
+- ✅ Все необходимые импорты и утилиты
 
-Я добавил функцию `create_jetton_content()` в контракт, которая автоматически создает все метаданные:
-- **Название**: tolya
-- **Символ**: tol  
-- **Decimals**: 9
-- **Изображение**: https://cache.tonapi.io/imgproxy/QOtsjsEA_bkTPXbfkNlSy4EFhmpad0q0Xb_4dN7ZzyU/rs:fill:500:500:1/g:no/aHR0cHM6Ly9jYWNoZS50b25hcGkuaW8vZG5zL3ByZXZpZXcvdG9seWEudG9uLnBuZw.webp
-
-**Что это значит простыми словами:**
-- Раньше нужно было вручную передавать название, описание, картинку и другие данные при деплое
-- Теперь все это уже написано в коде контракта
-- При деплое используется файл `init-code.fc`, который автоматически устанавливает все метаданные
-- **Вам ничего дополнительно передавать не нужно!** Просто деплойте контракт через `init-code.fc`
-
-## Параметры токена
-
-- **Название**: tolya
-- **Символ**: tol
-- **Decimals**: 9
-- **Начальный supply**: 0 (будет заминчен после деплоя)
-- **Максимальный supply**: 1,000,000 токенов
+### Веб-интерфейс
+- ✅ Современный дизайн в стиле ton.org
+- ✅ Интеграция с TON Connect
+- ✅ Форма для создания токенов
+- ✅ Поддержка mainnet и testnet
+- ✅ Адаптивный дизайн
 
 ## Структура проекта
 
 ```
 .
-├── jetton-minter.fc      # Основной контракт минтера (с метаданными внутри!)
-├── jetton-wallet.fc      # Контракт кошелька для токенов
-└── imports/
-    ├── stdlib.fc        # Стандартные функции
-    ├── op-codes.fc      # Коды операций
-    └── jetton-params.fc # Параметры и ошибки
+├── jetton-minter.fc      # Контракт минтера Jetton 2.0
+├── jetton-wallet.fc      # Контракт кошелька Jetton 2.0
+├── init-code.fc          # Код инициализации для деплоя
+├── imports/              # Импорты и утилиты
+│   ├── stdlib.fc        # Стандартная библиотека
+│   ├── op-codes.fc      # Коды операций Jetton 2.0
+│   ├── workchain.fc     # Утилиты для работы с workchain
+│   ├── jetton-utils.fc  # Утилиты для работы с жетонами
+│   └── gas.fc           # Расчеты газа
+└── web/                  # Веб-интерфейс
+    ├── src/
+    │   ├── components/  # React компоненты
+    │   └── App.tsx      # Главный компонент
+    └── package.json     # Зависимости
 ```
 
-## Сборка
+## Быстрый старт
 
-Для сборки контрактов используйте `func` компилятор:
+### 1. Сборка контрактов
 
 ```bash
-# Установка func (если еще не установлен)
-# Следуйте инструкциям: https://github.com/ton-blockchain/func
+# Компиляция wallet
+func -o jetton-wallet.fif -SPA imports/stdlib.fc imports/op-codes.fc imports/workchain.fc imports/jetton-utils.fc imports/gas.fc jetton-wallet.fc
 
-# Компиляция минтера
-func -o jetton-minter.fif -SPA imports/stdlib.fc imports/op-codes.fc imports/jetton-params.fc jetton-minter.fc
-
-# Компиляция кошелька
-func -o jetton-wallet.fif -SPA imports/stdlib.fc imports/op-codes.fc imports/jetton-params.fc jetton-wallet.fc
+# Компиляция minter
+func -o jetton-minter.fif -SPA imports/stdlib.fc imports/op-codes.fc imports/workchain.fc imports/jetton-utils.fc imports/gas.fc jetton-minter.fc
 ```
 
-## Деплой
+### 2. Запуск веб-интерфейса
 
-1. **Деплой минтера**:
-   - Используйте файл `init-code.fc` для деплоя - метаданные установятся автоматически!
-   - Компилируйте: `func -o init-code.fif -SPA imports/stdlib.fc imports/op-codes.fc imports/jetton-params.fc jetton-minter.fc init-code.fc`
-   - Администратором станет адрес, с которого вы деплоите
-   - Начальный supply будет 0
-   - **Все метаданные (name, description, image, symbol, decimals) уже встроены!**
+```bash
+cd web
+npm install
+npm start
+```
 
-2. **Минт токенов**:
-   - После деплоя отправьте сообщение `mint` на контракт
-   - Укажите количество: 1,000,000 * 10^9 = 1,000,000,000,000,000 nano-tokens
-   - Укажите адрес получателя
+Веб-интерфейс будет доступен по адресу http://localhost:3000
 
-## Get-методы
+## Использование
 
-### Jetton Minter
+1. **Подключите кошелек** через TON Connect
+2. **Заполните форму** с параметрами токена:
+   - Название токена
+   - Символ токена
+   - Описание
+   - URL изображения
+   - Количество знаков после запятой (обычно 9)
+   - Начальный выпуск
+3. **Нажмите "Создать токен"**
+4. **Подтвердите транзакцию** в кошельке
 
-- `get_jetton_data()` - возвращает (total_supply, mintable, jetton_content, -1)
-- `get_total_supply()` - возвращает общий supply
-- `get_mintable()` - возвращает флаг mintable (1 = можно минтить, 0 = нельзя)
-- `get_jetton_content()` - возвращает метаданные токена (name, description, image, symbol, decimals)
-- `get_admin_address()` - возвращает адрес администратора
-- `get_jetton_wallet_address(slice owner_address)` - вычисляет адрес кошелька для владельца
+## Особенности Jetton 2.0
 
-### Jetton Wallet
+- ✅ Соответствие официальной спецификации Jetton 2.0
+- ✅ Поддержка всех операций: mint, transfer, burn
+- ✅ Автоматическое создание кошельков получателей
+- ✅ Оптимизированные расчеты газа
+- ✅ Поддержка смены администратора
+- ✅ Обновление метаданных
 
-- `get_wallet_data()` - возвращает (balance, -1, -1, -1)
-- `get_balance()` - возвращает баланс токенов
-- `get_owner_address()` - возвращает адрес владельца
-- `get_jetton_master_address()` - возвращает адрес минтера
+## Технологии
 
-## Операции
+### Контракты
+- FunC (TON Smart Contract Language)
+- Официальные контракты Jetton 2.0
 
-### Mint (минт токенов)
-- Только администратор может минтить
-- Требует установленного флага `mintable = 1`
-- Для минта 1,000,000 токенов нужно отправить: 1,000,000 * 10^9 = 1,000,000,000,000,000 nano-tokens
+### Веб-интерфейс
+- React 18
+- TypeScript
+- TON Connect UI
+- @ton/core
 
-### Transfer (перевод токенов)
-- Владелец может переводить свои токены
-- Автоматически создает кошелек получателя, если его нет
+## Документация
 
-### Burn (сжигание токенов)
-- Владелец может сжигать свои токены
-- Уменьшает общий supply
+Подробные инструкции по сборке и деплою смотрите в [BUILD.md](./BUILD.md)
 
-## Примечания
+## Лицензия
 
-- Контракт соответствует стандарту Jetton 2.0
-- Все суммы хранятся в nano-tokens (с учетом decimals)
-- 1,000,000 токенов = 1,000,000,000,000,000 nano-tokens (с 9 decimals)
-- **Метаданные уже встроены в контракт через функцию `create_jetton_content()`**
+MIT
+
+## Ссылки
+
+- [Официальные контракты Jetton 2.0](https://github.com/ton-blockchain/jetton-contract/tree/jetton-2.0)
+- [TON Documentation](https://docs.ton.org)
+- [TON.org](https://ton.org)
