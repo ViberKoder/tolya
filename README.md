@@ -1,108 +1,131 @@
-# TOLYA Jetton 2.0 Contract
+# Jetton 2.0 Project
 
-Jetton 2.0 контракт для токена TOLYA в сети TON.
+Complete Jetton 2.0 implementation for TON Blockchain with a modern web minter interface.
 
-## ✅ Что уже готово:
-
-**ВСЕ МЕТАДАННЫЕ УЖЕ ВСТРОЕНЫ В КОНТРАКТ!** 
-
-Я добавил функцию `create_jetton_content()` в контракт, которая автоматически создает все метаданные:
-- **Название**: tolya
-- **Символ**: tol  
-- **Decimals**: 9
-- **Изображение**: https://cache.tonapi.io/imgproxy/QOtsjsEA_bkTPXbfkNlSy4EFhmpad0q0Xb_4dN7ZzyU/rs:fill:500:500:1/g:no/aHR0cHM6Ly9jYWNoZS50b25hcGkuaW8vZG5zL3ByZXZpZXcvdG9seWEudG9uLnBuZw.webp
-
-**Что это значит простыми словами:**
-- Раньше нужно было вручную передавать название, описание, картинку и другие данные при деплое
-- Теперь все это уже написано в коде контракта
-- При деплое используется файл `init-code.fc`, который автоматически устанавливает все метаданные
-- **Вам ничего дополнительно передавать не нужно!** Просто деплойте контракт через `init-code.fc`
-
-## Параметры токена
-
-- **Название**: tolya
-- **Символ**: tol
-- **Decimals**: 9
-- **Начальный supply**: 0 (будет заминчен после деплоя)
-- **Максимальный supply**: 1,000,000 токенов
-
-## Структура проекта
+## 📁 Project Structure
 
 ```
 .
-├── jetton-minter.fc      # Основной контракт минтера (с метаданными внутри!)
-├── jetton-wallet.fc      # Контракт кошелька для токенов
-└── imports/
-    ├── stdlib.fc        # Стандартные функции
-    ├── op-codes.fc      # Коды операций
-    └── jetton-params.fc # Параметры и ошибки
+├── jetton-minter.fc          # FunC smart contract for Jetton Minter
+├── jetton-wallet.fc          # FunC smart contract for Jetton Wallet
+├── init-code.fc              # Initialization code for deployment
+├── imports/                  # FunC imports
+│   ├── stdlib.fc            # Standard library
+│   ├── op-codes.fc          # Operation codes
+│   └── jetton-params.fc     # Parameters and errors
+└── minter-frontend/         # Web interface for creating tokens
+    ├── src/
+    │   ├── components/      # React components
+    │   ├── contracts/       # Contract wrappers
+    │   ├── hooks/           # Custom hooks
+    │   ├── pages/           # Next.js pages
+    │   ├── styles/          # CSS styles
+    │   └── utils/           # Utility functions
+    ├── public/              # Static assets
+    └── package.json
 ```
 
-## Сборка
+## 🚀 Features
 
-Для сборки контрактов используйте `func` компилятор:
+### Smart Contracts (FunC)
+- **Jetton Minter**: Main contract for token creation and management
+- **Jetton Wallet**: Individual wallet contract for token holders
+- Full Jetton 2.0 (TEP-74) standard compliance
+- On-chain metadata support (TEP-64)
+
+### Web Interface
+- Modern UI inspired by ton.org
+- TON Connect 2.0 wallet integration
+- One-click token deployment
+- Admin panel for token management
+- Responsive design for all devices
+
+## 🎯 Quick Start
+
+### Web Interface
 
 ```bash
-# Установка func (если еще не установлен)
-# Следуйте инструкциям: https://github.com/ton-blockchain/func
+# Navigate to frontend
+cd minter-frontend
 
-# Компиляция минтера
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000)
+
+### Smart Contracts
+
+```bash
+# Compile contracts (requires func compiler)
 func -o jetton-minter.fif -SPA imports/stdlib.fc imports/op-codes.fc imports/jetton-params.fc jetton-minter.fc
-
-# Компиляция кошелька
 func -o jetton-wallet.fif -SPA imports/stdlib.fc imports/op-codes.fc imports/jetton-params.fc jetton-wallet.fc
 ```
 
-## Деплой
+## 💰 Token Creation
 
-1. **Деплой минтера**:
-   - Используйте файл `init-code.fc` для деплоя - метаданные установятся автоматически!
-   - Компилируйте: `func -o init-code.fif -SPA imports/stdlib.fc imports/op-codes.fc imports/jetton-params.fc jetton-minter.fc init-code.fc`
-   - Администратором станет адрес, с которого вы деплоите
-   - Начальный supply будет 0
-   - **Все метаданные (name, description, image, symbol, decimals) уже встроены!**
+1. **Connect Wallet**: Use Tonkeeper, OpenMask, or any TON Connect wallet
+2. **Fill Details**:
+   - Token Name
+   - Symbol
+   - Description
+   - Image URL
+   - Total Supply
+   - Decimals (default: 9)
+3. **Deploy**: Click "Create Jetton" (~0.1 TON)
+4. **Done!**: Your token is live on TON
 
-2. **Минт токенов**:
-   - После деплоя отправьте сообщение `mint` на контракт
-   - Укажите количество: 1,000,000 * 10^9 = 1,000,000,000,000,000 nano-tokens
-   - Укажите адрес получателя
+## 🔧 Token Management
 
-## Get-методы
+After deployment, use the Admin Panel to:
+- Mint additional tokens (if mintable)
+- Change admin address
+- View token information
 
-### Jetton Minter
+## 📋 Standards Implemented
 
-- `get_jetton_data()` - возвращает (total_supply, mintable, jetton_content, -1)
-- `get_total_supply()` - возвращает общий supply
-- `get_mintable()` - возвращает флаг mintable (1 = можно минтить, 0 = нельзя)
-- `get_jetton_content()` - возвращает метаданные токена (name, description, image, symbol, decimals)
-- `get_admin_address()` - возвращает адрес администратора
-- `get_jetton_wallet_address(slice owner_address)` - вычисляет адрес кошелька для владельца
+- **TEP-74**: Fungible Tokens (Jettons) Standard
+- **TEP-64**: Token Data Standard
+- **TEP-89**: Discoverable Jettons Wallets
 
-### Jetton Wallet
+## 🌐 Deployment
 
-- `get_wallet_data()` - возвращает (balance, -1, -1, -1)
-- `get_balance()` - возвращает баланс токенов
-- `get_owner_address()` - возвращает адрес владельца
-- `get_jetton_master_address()` - возвращает адрес минтера
+### Frontend (Vercel)
 
-## Операции
+```bash
+cd minter-frontend
+npm run build
+npx vercel --prod
+```
 
-### Mint (минт токенов)
-- Только администратор может минтить
-- Требует установленного флага `mintable = 1`
-- Для минта 1,000,000 токенов нужно отправить: 1,000,000 * 10^9 = 1,000,000,000,000,000 nano-tokens
+### Frontend (Docker)
 
-### Transfer (перевод токенов)
-- Владелец может переводить свои токены
-- Автоматически создает кошелек получателя, если его нет
+```bash
+cd minter-frontend
+docker build -t jetton-minter .
+docker run -p 3000:3000 jetton-minter
+```
 
-### Burn (сжигание токенов)
-- Владелец может сжигать свои токены
-- Уменьшает общий supply
+## 📚 Resources
 
-## Примечания
+- [TON Documentation](https://docs.ton.org)
+- [Jetton Standard (TEP-74)](https://github.com/ton-blockchain/TEPs/blob/master/text/0074-jettons-standard.md)
+- [Official Jetton Contracts](https://github.com/ton-blockchain/jetton-contract)
+- [TON Connect](https://github.com/ton-connect)
 
-- Контракт соответствует стандарту Jetton 2.0
-- Все суммы хранятся в nano-tokens (с учетом decimals)
-- 1,000,000 токенов = 1,000,000,000,000,000 nano-tokens (с 9 decimals)
-- **Метаданные уже встроены в контракт через функцию `create_jetton_content()`**
+## 🛡️ Security
+
+- Based on official TON Foundation implementations
+- No private keys handled by frontend
+- All transactions require wallet confirmation
+
+## 📄 License
+
+MIT License
+
+---
+
+Built with ❤️ on [The Open Network](https://ton.org)
