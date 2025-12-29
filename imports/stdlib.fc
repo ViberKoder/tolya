@@ -1,5 +1,0 @@
-;; Standard library functions
-
-int workchain() asm "PUSHINT -1";
-int null() asm "NULL";
-slice my_address() asm "MYADDR";

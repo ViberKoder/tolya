@@ -1,0 +1,33 @@
+{
+  "name": "jetton-minter-2.0",
+  "version": "1.0.0",
+  "description": "Jetton 2.0 Minter - Create your own tokens on TON blockchain",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "compile:minter": "func -o build/jetton-minter.fif -SPA contracts/imports/stdlib.fc contracts/imports/op-codes.fc contracts/imports/jetton-params.fc contracts/jetton-minter.fc",
+    "compile:wallet": "func -o build/jetton-wallet.fif -SPA contracts/imports/stdlib.fc contracts/imports/op-codes.fc contracts/imports/jetton-params.fc contracts/jetton-wallet.fc"
+  },
+  "dependencies": {
+    "@ton/core": "^0.56.0",
+    "@ton/crypto": "^3.2.0",
+    "@ton/ton": "^13.11.0",
+    "@tonconnect/ui-react": "^2.0.5",
+    "next": "^14.0.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.4.1",
+    "zustand": "^4.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "@types/react": "^18.2.46",
+    "@types/react-dom": "^18.2.18",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.3.3"
+  }
+}

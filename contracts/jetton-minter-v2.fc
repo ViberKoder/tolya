@@ -1,0 +1,171 @@
+#include "imports/stdlib.fc";
+#include "imports/op-codes.fc";
+#include "imports/jetton-params.fc";
+
+;; Jetton 2.0 Minter Contract - Configurable Version
+;; This contract allows creating custom jettons with configurable metadata
+
+;; Storage:
+;; - admin_address: slice
+;; - total_supply: int
+;; - jetton_content: cell (metadata)
+;; - mintable: int (1 bit)
+;; - jetton_wallet_code: cell
+
+(slice, int, cell, int, cell) load_data() inline {
+    slice ds = get_data().begin_parse();
+    return (
+        ds~load_msg_addr(),  ;; admin_address
+        ds~load_coins(),     ;; total_supply
+        ds~load_ref(),       ;; jetton_content
+        ds~load_uint(1),     ;; mintable
+        ds~load_ref()        ;; jetton_wallet_code
+    );
+}
+
+() save_data(slice admin_address, int total_supply, cell jetton_content, int mintable, cell jetton_wallet_code) impure inline {
+    set_data(begin_cell()
+        .store_slice(admin_address)
+        .store_coins(total_supply)
+        .store_ref(jetton_content)
+        .store_uint(mintable, 1)
+        .store_ref(jetton_wallet_code)
+        .end_cell());
+}
+
+() mint_tokens(slice to_address, int amount, int query_id, int forward_ton_amount) impure {
+    var (admin_address, total_supply, jetton_content, mintable, jetton_wallet_code) = load_data();
+    
+    total_supply += amount;
+    save_data(admin_address, total_supply, jetton_content, mintable, jetton_wallet_code);
+
+    cell state_init = calculate_jetton_wallet_state_init(to_address, my_address(), jetton_wallet_code);
+    slice to_wallet_address = calculate_jetton_wallet_address(state_init);
+    
+    var msg = begin_cell()
+        .store_uint(0x18, 6)
+        .store_slice(to_wallet_address)
+        .store_coins(forward_ton_amount)
+        .store_uint(4 + 2 + 1, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+        .store_ref(state_init)
+        .store_ref(begin_cell()
+            .store_uint(op::internal_transfer(), 32)
+            .store_uint(query_id, 64)
+            .store_coins(amount)
+            .store_slice(admin_address)
+            .store_slice(admin_address)
+            .store_coins(0)
+            .store_uint(0, 1)
+            .end_cell())
+        .end_cell();
+    
+    send_raw_message(msg, 1);
+}
+
+() recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
+    if (in_msg_body.slice_empty?()) {
+        return ();
+    }
+
+    slice cs = in_msg_full.begin_parse();
+    int flags = cs~load_uint(4);
+    
+    if (flags & 1) {
+        return ();
+    }
+    
+    slice sender_address = cs~load_msg_addr();
+    
+    int op = in_msg_body~load_uint(32);
+    int query_id = in_msg_body~load_uint(64);
+    
+    var (admin_address, total_supply, jetton_content, mintable, jetton_wallet_code) = load_data();
+
+    if (op == op::mint()) {
+        throw_unless(error::unauthorized(), equal_slices(sender_address, admin_address));
+        throw_unless(error::not_mintable(), mintable);
+        
+        int amount = in_msg_body~load_coins();
+        slice to_address = in_msg_body~load_msg_addr();
+        int forward_ton_amount = in_msg_body~load_coins();
+        
+        mint_tokens(to_address, amount, query_id, forward_ton_amount);
+        return ();
+    }
+
+    if (op == op::burn_notification()) {
+        int jetton_amount = in_msg_body~load_coins();
+        slice from_address = in_msg_body~load_msg_addr();
+        
+        cell state_init = calculate_jetton_wallet_state_init(from_address, my_address(), jetton_wallet_code);
+        slice from_wallet_address = calculate_jetton_wallet_address(state_init);
+        
+        throw_unless(error::unauthorized(), equal_slices(sender_address, from_wallet_address));
+        
+        total_supply -= jetton_amount;
+        save_data(admin_address, total_supply, jetton_content, mintable, jetton_wallet_code);
+        
+        slice response_address = in_msg_body~load_msg_addr();
+        if (response_address.preload_uint(2) != 0) {
+            var msg = begin_cell()
+                .store_uint(0x10, 6)
+                .store_slice(response_address)
+                .store_coins(0)
+                .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+                .store_uint(op::excesses(), 32)
+                .store_uint(query_id, 64);
+            send_raw_message(msg.end_cell(), 2 + 64);
+        }
+        return ();
+    }
+
+    if (op == op::change_admin()) {
+        throw_unless(error::unauthorized(), equal_slices(sender_address, admin_address));
+        slice new_admin_address = in_msg_body~load_msg_addr();
+        save_data(new_admin_address, total_supply, jetton_content, mintable, jetton_wallet_code);
+        return ();
+    }
+
+    if (op == op::change_content()) {
+        throw_unless(error::unauthorized(), equal_slices(sender_address, admin_address));
+        cell new_content = in_msg_body~load_ref();
+        save_data(admin_address, total_supply, new_content, mintable, jetton_wallet_code);
+        return ();
+    }
+
+    throw(error::unknown_op());
+}
+
+;; Get methods
+
+(int, int, slice, cell, cell) get_jetton_data() method_id {
+    var (admin_address, total_supply, content, mintable, jetton_wallet_code) = load_data();
+    return (total_supply, mintable, admin_address, content, jetton_wallet_code);
+}
+
+slice get_wallet_address(slice owner_address) method_id {
+    var (_, _, _, _, jetton_wallet_code) = load_data();
+    cell state_init = calculate_jetton_wallet_state_init(owner_address, my_address(), jetton_wallet_code);
+    return calculate_jetton_wallet_address(state_init);
+}
+
+cell calculate_jetton_wallet_state_init(slice owner_address, slice jetton_master_address, cell jetton_wallet_code) inline {
+    return begin_cell()
+        .store_uint(0, 2)
+        .store_dict(jetton_wallet_code)
+        .store_dict(begin_cell()
+            .store_slice(owner_address)
+            .store_slice(jetton_master_address)
+            .end_cell())
+        .store_uint(0, 1)
+        .end_cell();
+}
+
+slice calculate_jetton_wallet_address(cell state_init) inline {
+    return begin_cell()
+        .store_uint(4, 3)
+        .store_int(workchain(), 8)
+        .store_uint(cell_hash(state_init), 256)
+        .end_cell()
+        .begin_parse();
+}

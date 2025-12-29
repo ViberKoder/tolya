@@ -1,0 +1,9 @@
+;; Jetton parameters and error codes
+
+;; Error codes
+int error::unauthorized() asm "705 PUSHINT";
+int error::insufficient_balance() asm "706 PUSHINT";
+int error::unknown_op() asm "707 PUSHINT";
+int error::not_mintable() asm "708 PUSHINT";
+int error::invalid_op() asm "709 PUSHINT";
+int error::wrong_workchain() asm "333 PUSHINT";
