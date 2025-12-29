@@ -39,15 +39,15 @@
     var (owner_address, jetton_master_address, balance, wallet_code) = load_data();
 
     if (op == op::internal_transfer()) {
-        throw_unless(error::unauthorized, equal_slices(sender_address, jetton_master_address));
+        throw_unless(error::unauthorized(), equal_slices(sender_address, jetton_master_address));
 
         int amount = in_msg_body~load_coins();
         int response_destination = in_msg_body~load_int(1);
         int custom_payload = in_msg_body~load_int(1);
-        slice forward_ton_amount = in_msg_body~load_coins();
+        int forward_ton_amount = in_msg_body~load_coins();
         slice forward_payload = in_msg_body~load_slice_ref();
 
-        throw_unless(error::insufficient_balance, balance >= amount);
+        throw_unless(error::insufficient_balance(), balance >= amount);
 
         balance = balance - amount;
         save_data(owner_address, jetton_master_address, balance, wallet_code);
@@ -81,16 +81,16 @@
         }
     }
     elseif (op == op::transfer()) {
-        throw_unless(error::unauthorized, equal_slices(sender_address, owner_address));
+        throw_unless(error::unauthorized(), equal_slices(sender_address, owner_address));
 
         int amount = in_msg_body~load_coins();
         slice destination = in_msg_body~load_msg_addr();
         int response_destination = in_msg_body~load_int(1);
         int custom_payload = in_msg_body~load_int(1);
-        slice forward_ton_amount = in_msg_body~load_coins();
+        int forward_ton_amount = in_msg_body~load_coins();
         slice forward_payload = in_msg_body~load_slice_ref();
 
-        throw_unless(error::insufficient_balance, balance >= amount);
+        throw_unless(error::insufficient_balance(), balance >= amount);
 
         balance = balance - amount;
         save_data(owner_address, jetton_master_address, balance, wallet_code);
@@ -148,13 +148,13 @@
         }
     }
     elseif (op == op::burn()) {
-        throw_unless(error::unauthorized, equal_slices(sender_address, owner_address));
+        throw_unless(error::unauthorized(), equal_slices(sender_address, owner_address));
 
         int amount = in_msg_body~load_coins();
         int response_destination = in_msg_body~load_int(1);
         int custom_payload = in_msg_body~load_int(1);
 
-        throw_unless(error::insufficient_balance, balance >= amount);
+        throw_unless(error::insufficient_balance(), balance >= amount);
 
         balance = balance - amount;
         save_data(owner_address, jetton_master_address, balance, wallet_code);
@@ -191,12 +191,12 @@
         }
     }
     else {
-        throw(error::unknown_op);
+        throw(error::unknown_op());
     }
 }
 
 () recv_external(slice in_msg) impure {
-    throw(error::not_supported);
+    throw(error::not_supported());
 }
 
 (int) get_wallet_data() method_id {

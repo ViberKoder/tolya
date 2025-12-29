@@ -1,5 +1,76 @@
-;; Standard library functions
+;; Standard library for FunC (Partial)
+
+;;; Cell primitives
+
+builder begin_cell() asm "NEWC";
+builder store_uint(builder b, int x, int len) asm "STUX";
+builder store_int(builder b, int x, int len) asm "STIX";
+builder store_slice(builder b, slice s) asm "STSLICER";
+builder store_coins(builder b, int x) asm "STVARUINT16";
+builder store_ref(builder b, cell c) asm "STREF";
+cell end_cell(builder b) asm "ENDC";
+
+slice begin_parse(cell c) asm "CTOS";
+(slice, int) load_uint(slice s, int len) asm( -> 1 0) "LDUX";
+(slice, int) load_int(slice s, int len) asm( -> 1 0) "LDIX";
+(slice, int) load_coins(slice s) asm( -> 1 0) "LDVARUINT16";
+(slice, slice) load_bits(slice s, int len) asm( -> 1 0) "LDSLICEX";
+(slice, slice) load_msg_addr(slice s) asm( -> 1 0) "LDMSGADDR";
+(slice, cell) load_ref(slice s) asm( -> 1 0) "LDREF";
+
+;; (int) preload_uint(slice s, int len) asm "PLDUX";
+
+int slice_empty?(slice s) asm "SEMPTY";
+int slice_data_empty?(slice s) asm "SDEMPTY";
+int slice_refs_empty?(slice s) asm "SREMPTY";
+(int) slice_bits(slice s) asm "SBITS";
+(int) slice_refs(slice s) asm "SREFS";
+
+;;; Dictionary primitives
+
+cell new_dict() asm "NEWDICT";
+int dict_empty?(cell c) asm "DICTEMPTY";
+
+;;; Contract primitives
+
+cell get_data() asm "c4 PUSH";
+() set_data(cell c) asm "c4 POP";
+
+slice my_address() asm "MYADDR";
+int balance() asm "BALANCE";
+
+() send_raw_message(cell msg, int mode) asm "SENDMSG";
+
+;;; Misc
+
+;; () throw(int excno) asm "THROWANY";
+;; () throw_unless(int excno, int cond) asm "THROWARGUNLESS";
+;; () throw_if(int excno, int cond) asm "THROWARGIF";
 
 int workchain() asm "PUSHINT -1";
-int null() asm "NULL";
-slice my_address() asm "MYADDR";
+
+int equal_slices(slice a, slice b) asm "SDEQ";
+
+int cell_hash(cell c) asm "HASHCU";
+
+builder store_slice_ref(builder b, slice s) inline {
+  if (slice_bits(s) > 0) {
+    return b.store_ref(begin_cell().store_slice(s).end_cell());
+  } else {
+    return b.store_slice(s);
+  }
+}
+
+(slice, slice) load_slice_ref(slice s) inline {
+  if (slice_refs(s) > 0) {
+    cell c = s~load_ref();
+    return (s, c.begin_parse());
+  } else {
+    return (s, s);
+  }
+}
+
+forall X -> X null() asm "PUSHNULL";
+
+cell calculate_user_jetton_wallet_init(int workchain, slice owner_address, slice jetton_master_address);
+slice calculate_user_jetton_wallet_address(int workchain, slice owner_address, slice jetton_master_address);
