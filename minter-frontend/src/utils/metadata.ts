@@ -1,7 +1,8 @@
-import { beginCell, Cell, Dictionary } from '@ton/core';
+import { beginCell, Cell, Dictionary, Builder } from '@ton/core';
 
 // TEP-64 On-chain content prefix
 const ONCHAIN_CONTENT_PREFIX = 0x00;
+const SNAKE_PREFIX = 0x00;
 
 // Pre-computed SHA256 hashes for standard metadata keys (TEP-64)
 const METADATA_KEYS: { [key: string]: bigint } = {
@@ -12,34 +13,57 @@ const METADATA_KEYS: { [key: string]: bigint } = {
   decimals: BigInt('0xee80fd2f1e03480e2282363596ee752d7bb27f50776b95086a0279189675923e'),
 };
 
-// Create a snake cell for TEP-64 metadata (without prefix in dictionary values)
+/**
+ * Convert string to bytes using TextEncoder (works in browser and Node.js)
+ */
+function stringToBytes(str: string): Uint8Array {
+  return new TextEncoder().encode(str);
+}
+
+/**
+ * Creates a snake cell for TEP-64 on-chain metadata
+ * Format according to TEP-64: snake#00 data:(SnakeData ~n) = ContentData;
+ * 
+ * The first byte is 0x00 (snake format indicator)
+ * followed by the actual data bytes
+ */
 function makeSnakeCell(data: string): Cell {
-  const encoder = new TextEncoder();
-  const bytes = encoder.encode(data);
+  const bytes = stringToBytes(data);
   
-  // TEP-64 specifies snake format: data is split across cells if needed
-  // Each cell can hold up to 127 bytes (1023 bits / 8)
-  const MAX_BYTES_PER_CELL = 127;
+  // First cell: 0x00 prefix + up to 126 bytes of data
+  const builder = beginCell();
+  builder.storeUint(SNAKE_PREFIX, 8);
   
-  function createSnakeCells(data: Uint8Array, offset: number = 0): Cell {
-    const builder = beginCell();
-    const remainingBytes = data.length - offset;
-    const bytesToWrite = Math.min(remainingBytes, MAX_BYTES_PER_CELL);
-    
-    // Write bytes to current cell
-    for (let i = 0; i < bytesToWrite; i++) {
-      builder.storeUint(data[offset + i], 8);
-    }
-    
-    // If there's more data, create a reference to the next cell
-    if (offset + bytesToWrite < data.length) {
-      builder.storeRef(createSnakeCells(data, offset + bytesToWrite));
-    }
-    
-    return builder.endCell();
+  const firstChunkSize = Math.min(bytes.length, 126);
+  for (let i = 0; i < firstChunkSize; i++) {
+    builder.storeUint(bytes[i], 8);
   }
   
-  return createSnakeCells(bytes);
+  // If more data, continue in referenced cells (no prefix in continuation)
+  if (bytes.length > 126) {
+    builder.storeRef(makeSnakeContinuation(bytes, 126));
+  }
+  
+  return builder.endCell();
+}
+
+/**
+ * Creates continuation cells for snake data (no prefix)
+ */
+function makeSnakeContinuation(bytes: Uint8Array, offset: number): Cell {
+  const builder = beginCell();
+  const remaining = bytes.length - offset;
+  const chunkSize = Math.min(remaining, 127);
+  
+  for (let i = 0; i < chunkSize; i++) {
+    builder.storeUint(bytes[offset + i], 8);
+  }
+  
+  if (offset + chunkSize < bytes.length) {
+    builder.storeRef(makeSnakeContinuation(bytes, offset + chunkSize));
+  }
+  
+  return builder.endCell();
 }
 
 export interface JettonMetadata {
