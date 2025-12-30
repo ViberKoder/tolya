@@ -4,7 +4,7 @@ import { TonConnectUIProvider } from '@tonconnect/ui-react';
 import { Toaster } from 'react-hot-toast';
 
 // TON Connect manifest URL
-const manifestUrl = 'https://macosov.site/tonconnect-manifest.json';
+const manifestUrl = 'https://jetton-minter-f9lx2yg9i-viber-koders-projects.vercel.app/tonconnect-manifest.json';
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
