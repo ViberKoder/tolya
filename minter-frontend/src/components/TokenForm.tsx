@@ -233,9 +233,10 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <div>
-                <h4 className="font-medium text-ton-blue mb-1">Jetton 2.0 Standard</h4>
+                <h4 className="font-medium text-ton-blue mb-1">Standard Jetton (TEP-74)</h4>
                 <p className="text-sm text-gray-400">
-                  Токен будет создан по стандарту Jetton 2.0 для максимальной совместимости с кошельками и DEX.
+                  Токен создается по стандарту TEP-74 с on-chain метаданными (TEP-64). 
+                  Полная совместимость с DeDust, STON.fi и всеми кошельками/эксплорерами.
                 </p>
               </div>
             </div>

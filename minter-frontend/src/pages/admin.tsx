@@ -18,16 +18,15 @@ interface JettonInfo {
   decimals: number;
 }
 
-// Jetton 2.0 Operation codes (stablecoin-contract)
+// Standard Jetton Operation codes (TonWeb/minter.ton.org compatible)
 const Opcodes = {
-  mint: 0x642b7d07,
-  changeAdmin: 0x6501f354,
-  claimAdmin: 0xfb88e119,
-  dropAdmin: 0xcb862902,
+  mint: 21, // Standard mint opcode
+  changeAdmin: 3,
+  changeContent: 4,
   internalTransfer: 0x178d4519,
+  transfer: 0xf8a7ea5,
   burn: 0x595f07bc,
   burnNotification: 0x7bdd97de,
-  topUp: 0xd372158c,
 };
 
 export default function AdminPage() {
@@ -162,22 +161,22 @@ export default function AdminPage() {
       const decimals = jettonInfo?.decimals || 9;
       const amount = BigInt(mintAmount) * BigInt(10 ** decimals);
       
-      // Jetton 2.0 mint message
+      // Standard Jetton mint message (TonWeb format)
       const internalTransferMsg = beginCell()
         .storeUint(Opcodes.internalTransfer, 32)
-        .storeUint(0, 64)
-        .storeCoins(amount)
-        .storeAddress(null)
-        .storeAddress(wallet)
-        .storeCoins(0)
-        .storeMaybeRef(null)
+        .storeUint(0, 64) // query_id
+        .storeCoins(amount) // jetton_amount
+        .storeAddress(null) // from_address
+        .storeAddress(null) // response_address
+        .storeCoins(0) // forward_ton_amount
+        .storeBit(false) // no forward_payload
         .endCell();
 
       const mintBody = beginCell()
-        .storeUint(Opcodes.mint, 32)
-        .storeUint(0, 64)
-        .storeAddress(toAddress)
-        .storeCoins(toNano('0.1'))
+        .storeUint(Opcodes.mint, 32) // op = 21
+        .storeUint(0, 64) // query_id
+        .storeAddress(toAddress) // destination
+        .storeCoins(toNano('0.05')) // forward_ton_amount
         .storeRef(internalTransferMsg)
         .endCell();
 
@@ -209,7 +208,7 @@ export default function AdminPage() {
     try {
       const adminAddress = Address.parse(newAdmin);
       
-      // Jetton 2.0 change_admin (0x6501f354)
+      // Standard Jetton change_admin (op = 3)
       const changeAdminBody = beginCell()
         .storeUint(Opcodes.changeAdmin, 32)
         .storeUint(0, 64)
@@ -222,7 +221,7 @@ export default function AdminPage() {
         body: changeAdminBody.toBoc().toString('base64'),
       });
 
-      toast.success('Запрос на смену администратора отправлен! Новый администратор должен подтвердить права.');
+      toast.success('Права администратора переданы!');
       setNewAdmin('');
     } catch (error: any) {
       toast.error(error.message || 'Ошибка смены администратора');
@@ -236,16 +235,17 @@ export default function AdminPage() {
     }
 
     try {
-      // Jetton 2.0 drop_admin message (0xcb862902)
-      const dropAdminBody = beginCell()
-        .storeUint(Opcodes.dropAdmin, 32)
+      // Standard Jetton: set admin to null address (op = 3 with null address)
+      const revokeAdminBody = beginCell()
+        .storeUint(Opcodes.changeAdmin, 32)
         .storeUint(0, 64)
+        .storeAddress(null) // null = no admin
         .endCell();
 
       await sendTransaction({
         to: contractAddress,
         value: toNano('0.05').toString(),
-        body: dropAdminBody.toBoc().toString('base64'),
+        body: revokeAdminBody.toBoc().toString('base64'),
       });
 
       toast.success('Права администратора отозваны! Токен теперь полностью децентрализован.');
@@ -277,7 +277,7 @@ export default function AdminPage() {
   return (
     <>
       <Head>
-        <title>Управление токеном | Jetton 2.0 Minter</title>
+        <title>Управление токеном | Jetton Minter</title>
       </Head>
 
       <div className="min-h-screen flex flex-col">
@@ -294,7 +294,7 @@ export default function AdminPage() {
               Управление <span className="gradient-text">токеном</span>
             </h1>
             <p className="text-gray-400 text-center mb-8">
-              Jetton 2.0 Admin Panel
+              Standard Jetton Admin Panel (DEX Compatible)
             </p>
 
             {/* Contract Address Input */}
@@ -376,18 +376,17 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  {/* Important notice about Jetton 2.0 */}
-                  <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+                  {/* Important notice about standard Jetton */}
+                  <div className="mt-4 p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
                     <div className="flex items-start gap-3">
-                      <svg className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <div>
-                        <h4 className="font-medium text-yellow-400 mb-1">Jetton 2.0 Standard</h4>
+                        <h4 className="font-medium text-green-400 mb-1">Standard Jetton (DEX Compatible)</h4>
                         <p className="text-sm text-gray-400">
-                          Стандарт Jetton 2.0 <strong className="text-yellow-400">не поддерживает изменение метаданных</strong> после создания токена. 
-                          Название, тикер, описание и аватарка задаются один раз при деплое и не могут быть изменены. 
-                          Это сделано для безопасности и защиты от мошенничества.
+                          Этот токен использует стандартный контракт Jetton, совместимый с DEX биржами (DeDust, STON.fi) и всеми эксплорерами.
+                          Метаданные хранятся on-chain в формате TEP-64.
                         </p>
                       </div>
                     </div>
@@ -558,7 +557,7 @@ export default function AdminPage() {
                           <div className="p-6 bg-ton-gray-light rounded-xl">
                             <h4 className="font-semibold text-white mb-2">Передать права администратора</h4>
                             <p className="text-sm text-gray-400 mb-4">
-                              Новый администратор должен будет подтвердить права с помощью транзакции claim_admin.
+                              Передайте права администратора на другой адрес. Новый администратор сразу получит полный контроль.
                             </p>
                             <div>
                               <label className="block text-sm font-medium text-gray-300 mb-2">
