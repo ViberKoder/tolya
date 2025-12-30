@@ -3,8 +3,10 @@ import type { AppProps } from 'next/app';
 import { TonConnectUIProvider } from '@tonconnect/ui-react';
 import { Toaster } from 'react-hot-toast';
 
-// TON Connect manifest URL
-const manifestUrl = 'https://jetton-minter-f9lx2yg9i-viber-koders-projects.vercel.app/tonconnect-manifest.json';
+// TON Connect manifest URL - dynamically use current origin
+const manifestUrl = typeof window !== 'undefined' 
+  ? `${window.location.origin}/tonconnect-manifest.json`
+  : 'https://jetton-minter-viber-koders-projects.vercel.app/tonconnect-manifest.json';
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
