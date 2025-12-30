@@ -18,13 +18,16 @@ interface JettonInfo {
   decimals: number;
 }
 
-// Jetton 2.0 Operation codes
+// Jetton 2.0 Operation codes (stablecoin-contract)
 const Opcodes = {
   mint: 0x642b7d07,
   changeAdmin: 0x6501f354,
   claimAdmin: 0xfb88e119,
   dropAdmin: 0xcb862902,
   internalTransfer: 0x178d4519,
+  burn: 0x595f07bc,
+  burnNotification: 0x7bdd97de,
+  topUp: 0xd372158c,
 };
 
 export default function AdminPage() {
