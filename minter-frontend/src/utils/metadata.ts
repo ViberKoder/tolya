@@ -1,8 +1,8 @@
-import { beginCell, Cell, Dictionary, Builder } from '@ton/core';
+import { beginCell, Cell, Dictionary } from '@ton/core';
 
-// TEP-64 On-chain content prefix
+// TEP-64 content prefixes
 const ONCHAIN_CONTENT_PREFIX = 0x00;
-const SNAKE_PREFIX = 0x00;
+const OFFCHAIN_CONTENT_PREFIX = 0x01;
 
 // Pre-computed SHA256 hashes for standard metadata keys (TEP-64)
 const METADATA_KEYS: { [key: string]: bigint } = {
@@ -14,56 +14,47 @@ const METADATA_KEYS: { [key: string]: bigint } = {
 };
 
 /**
- * Convert string to bytes using TextEncoder (works in browser and Node.js)
+ * Creates a snake cell - data stored in chunks across cells
+ * Used for both on-chain dictionary values and off-chain URI
  */
-function stringToBytes(str: string): Uint8Array {
-  return new TextEncoder().encode(str);
-}
-
-/**
- * Creates a snake cell for TEP-64 on-chain metadata
- * Format according to TEP-64: snake#00 data:(SnakeData ~n) = ContentData;
- * 
- * The first byte is 0x00 (snake format indicator)
- * followed by the actual data bytes
- */
-function makeSnakeCell(data: string): Cell {
-  const bytes = stringToBytes(data);
+function makeSnakeCell(data: Buffer, includePrefix: boolean = false): Cell {
+  const CELL_MAX_SIZE = 127;
   
-  // First cell: 0x00 prefix + up to 126 bytes of data
-  const builder = beginCell();
-  builder.storeUint(SNAKE_PREFIX, 8);
+  const chunks: Buffer[] = [];
+  let offset = 0;
   
-  const firstChunkSize = Math.min(bytes.length, 126);
-  for (let i = 0; i < firstChunkSize; i++) {
-    builder.storeUint(bytes[i], 8);
+  // First chunk is smaller if we need prefix
+  const firstChunkSize = includePrefix ? CELL_MAX_SIZE - 1 : CELL_MAX_SIZE;
+  
+  while (offset < data.length) {
+    const size = offset === 0 ? Math.min(data.length, firstChunkSize) : Math.min(data.length - offset, CELL_MAX_SIZE);
+    chunks.push(data.subarray(offset, offset + size));
+    offset += size;
   }
   
-  // If more data, continue in referenced cells (no prefix in continuation)
-  if (bytes.length > 126) {
-    builder.storeRef(makeSnakeContinuation(bytes, 126));
+  // Build cells from last to first
+  let currentCell: Cell | null = null;
+  
+  for (let i = chunks.length - 1; i >= 0; i--) {
+    const builder = beginCell();
+    
+    // Add prefix only to first cell if requested
+    if (i === 0 && includePrefix) {
+      builder.storeUint(0x00, 8); // Snake prefix
+    }
+    
+    // Store chunk data
+    builder.storeBuffer(chunks[i]);
+    
+    // Add reference to previous cell if exists
+    if (currentCell) {
+      builder.storeRef(currentCell);
+    }
+    
+    currentCell = builder.endCell();
   }
   
-  return builder.endCell();
-}
-
-/**
- * Creates continuation cells for snake data (no prefix)
- */
-function makeSnakeContinuation(bytes: Uint8Array, offset: number): Cell {
-  const builder = beginCell();
-  const remaining = bytes.length - offset;
-  const chunkSize = Math.min(remaining, 127);
-  
-  for (let i = 0; i < chunkSize; i++) {
-    builder.storeUint(bytes[offset + i], 8);
-  }
-  
-  if (offset + chunkSize < bytes.length) {
-    builder.storeRef(makeSnakeContinuation(bytes, offset + chunkSize));
-  }
-  
-  return builder.endCell();
+  return currentCell || beginCell().endCell();
 }
 
 export interface JettonMetadata {
@@ -74,43 +65,60 @@ export interface JettonMetadata {
   decimals: number;
 }
 
+/**
+ * Helper to convert string to Buffer
+ */
+function toBuffer(str: string): Buffer {
+  return Buffer.from(str, 'utf-8');
+}
+
+/**
+ * Build on-chain metadata using TEP-64 standard
+ * Format: 0x00 prefix + dictionary of sha256(key) -> snake_cell(value)
+ */
 export function buildOnchainMetadata(metadata: JettonMetadata): Cell {
   // Create dictionary with 256-bit keys
   const dict = Dictionary.empty(Dictionary.Keys.BigUint(256), Dictionary.Values.Cell());
   
-  // Add name
+  // Add name - with snake prefix (0x00) for TEP-64 compliance
   if (metadata.name) {
-    dict.set(METADATA_KEYS.name, makeSnakeCell(metadata.name));
+    dict.set(METADATA_KEYS.name, makeSnakeCell(toBuffer(metadata.name), true));
   }
   
   // Add symbol
   if (metadata.symbol) {
-    dict.set(METADATA_KEYS.symbol, makeSnakeCell(metadata.symbol));
+    dict.set(METADATA_KEYS.symbol, makeSnakeCell(toBuffer(metadata.symbol), true));
   }
   
   // Add description
   if (metadata.description) {
-    dict.set(METADATA_KEYS.description, makeSnakeCell(metadata.description));
+    dict.set(METADATA_KEYS.description, makeSnakeCell(toBuffer(metadata.description), true));
   }
   
   // Add image
   if (metadata.image) {
-    dict.set(METADATA_KEYS.image, makeSnakeCell(metadata.image));
+    dict.set(METADATA_KEYS.image, makeSnakeCell(toBuffer(metadata.image), true));
   }
   
   // Add decimals (as string)
-  dict.set(METADATA_KEYS.decimals, makeSnakeCell(metadata.decimals.toString()));
+  dict.set(METADATA_KEYS.decimals, makeSnakeCell(toBuffer(metadata.decimals.toString()), true));
   
-  // Build final content cell with on-chain prefix
+  // Build final content cell with on-chain prefix (0x00)
   return beginCell()
     .storeUint(ONCHAIN_CONTENT_PREFIX, 8)
     .storeDict(dict)
     .endCell();
 }
 
+/**
+ * Build off-chain metadata (URI to JSON file)
+ * Format: 0x01 prefix + URI string
+ */
 export function buildOffchainMetadata(metadataUri: string): Cell {
+  const uriBuffer = toBuffer(metadataUri);
+  
   return beginCell()
-    .storeUint(0x01, 8) // Off-chain prefix
-    .storeStringTail(metadataUri)
+    .storeUint(OFFCHAIN_CONTENT_PREFIX, 8)
+    .storeBuffer(uriBuffer)
     .endCell();
 }

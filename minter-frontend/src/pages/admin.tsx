@@ -18,11 +18,12 @@ interface JettonInfo {
   decimals: number;
 }
 
-// Jetton 1.0 Operation codes
+// Jetton 2.0 Operation codes
 const Opcodes = {
-  mint: 21, // 0x15
-  changeAdmin: 3, // change_admin
-  changeContent: 4, // change_content (allows metadata updates!)
+  mint: 0x642b7d07,
+  changeAdmin: 0x6501f354,
+  claimAdmin: 0xfb88e119,
+  dropAdmin: 0xcb862902,
   internalTransfer: 0x178d4519,
 };
 

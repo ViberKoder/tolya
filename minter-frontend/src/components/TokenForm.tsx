@@ -235,8 +235,22 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
               <div>
                 <h4 className="font-medium text-ton-blue mb-1">Jetton 2.0 Standard</h4>
                 <p className="text-sm text-gray-400">
-                  Your token will be deployed using the latest Jetton 2.0 standard, ensuring 
-                  maximum compatibility with TON wallets and DEXes.
+                  Токен будет создан по стандарту Jetton 2.0 для максимальной совместимости с кошельками и DEX.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Warning about immutable metadata */}
+          <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div>
+                <h4 className="font-medium text-yellow-400 mb-1">Важно!</h4>
+                <p className="text-sm text-gray-400">
+                  Название, тикер, описание и аватарка <strong className="text-yellow-400">не могут быть изменены</strong> после создания токена. Убедитесь, что все данные введены правильно!
                 </p>
               </div>
             </div>
