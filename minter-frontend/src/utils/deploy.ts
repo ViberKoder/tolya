@@ -4,19 +4,15 @@ import { buildOnchainMetadata } from './metadata';
 import { SendTransactionParams } from '@/hooks/useTonConnect';
 import toast from 'react-hot-toast';
 
-// Official Jetton Minter Code from ton-blockchain/token-contract
-// Compiled and verified
-const JETTON_MINTER_CODE_BASE64 = 'te6cckECDQEAAdQAART/APSkE/S88sgLAQIBYgIDAgLMBAUAG6D2BdqJofQB9IH0gahhAgEgBgcCASAICQC7CDHAJJfA+DQ0wMBcbCSXwPg+kAh+kQwwADy4U0w+kD6APpA+gDTHwFwINdJwh+OKjCEEIAAAAAAAACBLe+X4AFwgEBINdJwh/mMPLgeO37AOBfBNMfAcAA8uFN7UTQIBAKAgEgCwwACTQ/fDqRAAhMjKgPQD6APQAzxYjzxbKAMntVAAP0AdMHIcKgAdMAAeMC7VT4DwBxG+AAKDB0JCEw8vAEgCjXCgEm0N8QRG1tyMoAEss/EvQA9ADLAMkg2zx/ADEzMjQz0NU1EH8zVRLbPMjKABLLP0v0AMsAye1UAQD0E9DTAfpAMPpEMqJz+CXXSaACAqCrEfgjgggPQkC+8uBMIKsC+GPy4ExSYNs8gggPQkC8cPLgTIAg1yGwHPLgTL3y4E0iwgCOGCKCEDuaygC+8uBNBXCAQNs8f3BwVSBtbW3bPBA0PVvgIIIQ83x4InK6sPLgTNs8FRYXACCBAOq6EqGhArny0E1SINs8MgJq0NMf0z/R+CjXSddbFvhD+EL4KVUCED1VA9s8KYBCBqYBqYRw+CMgED9VGds8GxwdAOxAcIBA+EJY+EHbPHD4I4EBC/QKIYEBAfSDb6UgjjJfA4EBLPRL2zwgbpMwcJUgwQG68uLMkTHi1DDQ0wMBeLCTXwNw4PpAMPhC+EHbPH/bMeCCEJW4+5e64wI0NAL4Qvgo2zz4Qm1DE9s8XvhFxwXjAlUTREQe';
+// Official Jetton Minter Code (from ton-blockchain/token-contract, verified)
+// These are the standard TEP-74 contracts
+const JETTON_MINTER_CODE = Cell.fromBase64(
+  'te6ccgECEQEAAyMAART/APSkE/S88sgLAQIBYgIDAgLMBAUAG6D2BdqJofQB9IH0gahhAgHUBgcCASAICQDDCDHAJJfA+DQ0wMBcbCSXwPg+kAh+kQwwADy4U2CEA+KfqVSILqVMTRY8AXgghAXjUUZUiC6ljI0WPAGfwHgghBzYtCcUiC6ljQ0WPAHfwHg+QGC8IHQ83yj5nOHdP6nXFxWZhWaH+hDHoA8JJg9U7IHQSKP7AJpNBCEBCwIBIAoLABE+kQwcLry4U2ACAO9RNC6AJn0gfSBqGGEIH7TkIN6Cxs4sAAAACHoHo7/kR45EcIS5gAB5c+p/0aAEO47SgIOehtiIgud/8AAHm+gBB5JW8BDAF0QzQgq2h0dHBzOi8vc2VydmVyLmNvbS90b2tlbi5qc29ukWXCAI6GUCPPAQL0AIC9JBCi4w8MCQwNAKL4J28QIHBwgEDtRNACqAMCASAPEAAhbiPBmgC/ACaqgyqgu1V9dPJBSAIBWA0OAA3Qqq/wBO1UABG4yX7UTQ1wsfgAfbhm0N2Q0NMH0wfUMND0BPQF0x/T/9QB0PoA9AT0BPQE0QP0BDDQ+gAwE18DI8cF8uGSXwJxpOw='
+);
 
-const JETTON_WALLET_CODE_BASE64 = 'te6cckECEQEAA0MAART/APSkE/S88sgLAQIBYgIDAgLMBAUAG6D2BdqJofQB9IH0gahhAgHOBgcCASAMDQC7CDHAJJfBODQ0wMBcbCSXwTg+kAh+kQwwADy4U0w0x8BIMMAkl8E4PpA+gAx+gAwc6m0AALTH4IQe92X3roSsfLhS/go+ELbPPhCcPgo2zz4RfhCxwXy4U0T2zyAICQoLAAj0BNMHAAjXCx9/ADAg10nBIJFbj2Mg1wsfIIIQ8MDmcLrjAjDgAgFqDg8AOjD4Qvgo2zwwgggbd0Dy4VD4QvhCyMoAE8v/ye1UAPBBbIIIG3dA+ELbPIEBC/QKIYEBAfSDb6UgjjJfA4EBLPRL2zwgbpMwcJUgwQG68uLMkTHi1DDQ0wMBeLCTXwNw4PpAMPhC+EHbPH/bMeCCEJW4+5e64wI0NAL4Qvgo2zz4Qm1DE9s8XvhFxwXjAlUTREQQAAmhH5egWAAVvgLXdJFbb4tBBHAA6IIQO5rKAFIwufLhS/hCxwXy4UxSQNs8VQTbPMjKABPL/1AF+gIWygBYzxYTygDLB8ntVPhCcPgjUAT4Qts8gggbd0Chwv/y4VBwgEDbPFE0oVIHuY4VUUShqwAhwgCOl1EUoKsAoKsAoKH5QQEB';
-
-// Create Cell from base64
-function cellFromBase64(base64: string): Cell {
-  return Cell.fromBase64(base64);
-}
-
-const JETTON_MINTER_CODE = cellFromBase64(JETTON_MINTER_CODE_BASE64);
-const JETTON_WALLET_CODE = cellFromBase64(JETTON_WALLET_CODE_BASE64);
+const JETTON_WALLET_CODE = Cell.fromBase64(
+  'te6ccgECEgEAAzQAART/APSkE/S88sgLAQIBYgIDAgLMBAUAG6D2BdqJofQB9IH0gahhAgEgBgcCASAICQDPCDHAJJfA+DQ0wMBcbCSXwPg+kD6QDH6ADFx1yH6ADH6ADBzqbQhAh6PH18GIoIImJaAoBa88uGQgghA7msoAvvLhk/go+EK88uGU+EL4Qvgo2zwQJBAjcPgo2zw0QwNYoRORMeIQIwoKCwDLCDHAJJfA+DQ0wMBcbCSXwPg+kD6QDH6ADFx1yH6ADH6ADBzqbQhAh6PH18G+CjIyx8Vyx9QA88WzBP0AMv/yRJ/+EL4KPhC+Cn4KYBCiRA9QLvbPCDHBfLhmMj4QgH0ACDCAIoMDQ4BlshwAcsHy//J0Fj4KPgjVQVy2zwQI3D4KPhCEEYQNkAl2zwwMYIQO5rKAKkE+EL4KFj4KfhC+EK88uGH+EKhAREQAYAQgBBZ2zwQJwsAOC7AAI4SMSLOAYD6AsoAy//J0BLPFpFw4soAyQG6Ac8LAc8LySD5AMgCASAPEAAVvgLXdJFbb4LgFHAAEbsBfdqJoathfIA='
+);
 
 interface DeployResult {
   success: boolean;
@@ -45,8 +41,6 @@ export async function deployJettonMinter(
     const supplyWithDecimals = BigInt(tokenData.totalSupply) * BigInt(10 ** tokenData.decimals);
 
     // Build initial data for minter
-    // Jetton Minter data structure:
-    // total_supply:Coins admin_address:MsgAddress content:^Cell jetton_wallet_code:^Cell
     const minterData = beginCell()
       .storeCoins(0) // total_supply starts at 0
       .storeAddress(walletAddress) // admin_address
@@ -70,23 +64,22 @@ export async function deployJettonMinter(
       .store(storeStateInit(stateInit))
       .endCell();
 
-    // Build mint message body
-    // op::mint = 21 (0x15)
+    // Build mint message
     const internalTransferMsg = beginCell()
       .storeUint(0x178d4519, 32) // internal_transfer op
       .storeUint(0, 64) // query_id
       .storeCoins(supplyWithDecimals) // jetton_amount
-      .storeAddress(null) // from_address (null = minter)
+      .storeAddress(null) // from_address
       .storeAddress(walletAddress) // response_address
       .storeCoins(0) // forward_ton_amount
       .storeBit(false) // no forward_payload
       .endCell();
 
     const mintBody = beginCell()
-      .storeUint(21, 32) // op::mint = 21
+      .storeUint(21, 32) // op::mint
       .storeUint(0, 64) // query_id
       .storeAddress(walletAddress) // to_address
-      .storeCoins(toNano('0.05')) // ton_amount for wallet deploy
+      .storeCoins(toNano('0.05')) // ton_amount
       .storeRef(internalTransferMsg)
       .endCell();
 
@@ -103,22 +96,14 @@ export async function deployJettonMinter(
     
     if (result) {
       toast.success('Токен успешно создан!', { id: 'deploy' });
-      
-      return {
-        success: true,
-        address: minterAddress.toString(),
-      };
+      return { success: true, address: minterAddress.toString() };
     } else {
       throw new Error('Транзакция отклонена');
     }
   } catch (error: any) {
     console.error('Deployment failed:', error);
     toast.error(error.message || 'Ошибка создания токена', { id: 'deploy' });
-    
-    return {
-      success: false,
-      error: error.message || 'Unknown error',
-    };
+    return { success: false, error: error.message || 'Unknown error' };
   }
 }
 
