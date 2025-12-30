@@ -20,7 +20,7 @@ export interface TokenData {
 export type DeploymentStep = 'idle' | 'preparing' | 'deploying' | 'minting' | 'completed' | 'error';
 
 export default function Home() {
-  const { connected, wallet, sendTransaction } = useTonConnect();
+  const { connected, wallet, sendTransaction, sendMultipleMessages } = useTonConnect();
   const [step, setStep] = useState<DeploymentStep>('idle');
   const [deployedAddress, setDeployedAddress] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -43,7 +43,8 @@ export default function Home() {
       const result = await deployJettonMinter(
         tokenData,
         wallet,
-        sendTransaction
+        sendTransaction,
+        sendMultipleMessages
       );
       
       if (result.success && result.address) {

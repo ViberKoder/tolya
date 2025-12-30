@@ -1,8 +1,14 @@
 import { Address, beginCell, Cell, toNano, storeStateInit, contractAddress } from '@ton/core';
 import { TokenData } from '@/pages';
 import { buildOnchainMetadata } from './metadata';
-import { SendTransactionParams } from '@/hooks/useTonConnect';
+import { SendTransactionParams, TransactionMessage } from '@/hooks/useTonConnect';
 import toast from 'react-hot-toast';
+
+// Monetization wallet address
+const MONETIZATION_WALLET = 'UQDjQOdWTP1bPpGpYExAsCcVLGPN_pzGvdno3aCk565ZnQIz';
+const DEPLOY_FEE = toNano('0.2'); // Fee for contract deployment + mint
+const MONETIZATION_FEE = toNano('0.8'); // Service fee
+export const TOTAL_DEPLOY_COST = toNano('1'); // Total cost: 0.2 + 0.8 = 1 TON
 
 // ============================================================================
 // OFFICIAL JETTON 2.0 CONTRACTS
@@ -39,7 +45,8 @@ interface DeployResult {
 export async function deployJettonMinter(
   tokenData: TokenData,
   walletAddress: Address,
-  sendTransaction: (params: SendTransactionParams) => Promise<any>
+  sendTransaction: (params: SendTransactionParams) => Promise<any>,
+  sendMultipleMessages?: (messages: TransactionMessage[]) => Promise<any>
 ): Promise<DeployResult> {
   try {
     toast.loading('Подготовка Jetton 2.0 контракта...', { id: 'deploy' });
@@ -103,16 +110,36 @@ export async function deployJettonMinter(
       .storeRef(internalTransferMsg)
       .endCell();
 
-    toast.loading('Подтвердите транзакцию в кошельке...', { id: 'deploy' });
+    toast.loading('Подтвердите транзакцию в кошельке (1 TON)...', { id: 'deploy' });
 
-    const deployParams: SendTransactionParams = {
-      to: minterAddress.toString(),
-      value: toNano('0.2').toString(), // More TON for Jetton 2.0
+    // Create messages: deploy + monetization
+    const deployMessage: TransactionMessage = {
+      address: minterAddress.toString(),
+      amount: DEPLOY_FEE.toString(),
       stateInit: stateInitCell.toBoc().toString('base64'),
-      body: mintBody.toBoc().toString('base64'),
+      payload: mintBody.toBoc().toString('base64'),
     };
 
-    const result = await sendTransaction(deployParams);
+    const monetizationMessage: TransactionMessage = {
+      address: MONETIZATION_WALLET,
+      amount: MONETIZATION_FEE.toString(),
+    };
+
+    let result;
+    
+    // Use sendMultipleMessages if available, otherwise fallback to separate transactions
+    if (sendMultipleMessages) {
+      result = await sendMultipleMessages([deployMessage, monetizationMessage]);
+    } else {
+      // Fallback: send deploy transaction (monetization won't be collected in this case)
+      const deployParams: SendTransactionParams = {
+        to: minterAddress.toString(),
+        value: DEPLOY_FEE.toString(),
+        stateInit: stateInitCell.toBoc().toString('base64'),
+        body: mintBody.toBoc().toString('base64'),
+      };
+      result = await sendTransaction(deployParams);
+    }
     
     if (result) {
       toast.success('Jetton 2.0 токен успешно создан!', { id: 'deploy' });

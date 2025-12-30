@@ -260,8 +260,9 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
       <div className="mt-8 pt-6 border-t border-ton-gray-light">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-center md:text-left">
-            <p className="text-gray-400 text-sm">Estimated deployment cost</p>
-            <p className="text-white font-semibold">~0.1 TON</p>
+            <p className="text-gray-400 text-sm">Стоимость создания токена</p>
+            <p className="text-white font-semibold">1 TON</p>
+            <p className="text-xs text-gray-500">0.2 TON на деплой • 0.8 TON сервисный сбор</p>
           </div>
           
           <button

@@ -29,12 +29,12 @@ export default function DeploymentStatus({ step, deployedAddress, onReset }: Dep
           </div>
         </div>
 
-        <h2 className="text-2xl font-bold text-white mb-2">Token Created Successfully!</h2>
-        <p className="text-gray-400 mb-8">Your Jetton 2.0 token has been deployed to the TON blockchain.</p>
+        <h2 className="text-2xl font-bold text-white mb-2">Токен успешно создан!</h2>
+        <p className="text-gray-400 mb-8">Ваш Jetton 2.0 токен развернут в блокчейне TON.</p>
 
         {/* Contract Address */}
         <div className="p-4 bg-ton-gray-light rounded-xl mb-6">
-          <p className="text-sm text-gray-400 mb-2">Contract Address</p>
+          <p className="text-sm text-gray-400 mb-2">Адрес контракта</p>
           <div className="flex items-center justify-center gap-2">
             <code className="text-ton-blue font-mono text-sm break-all">{deployedAddress}</code>
             <button
@@ -49,7 +49,17 @@ export default function DeploymentStatus({ step, deployedAddress, onReset }: Dep
         </div>
 
         {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center flex-wrap">
+          <Link
+            href={`/admin?address=${deployedAddress}`}
+            className="btn-primary flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Модерировать токен
+          </Link>
           <Link
             href={`https://tonscan.org/address/${deployedAddress}`}
             target="_blank"
@@ -58,13 +68,13 @@ export default function DeploymentStatus({ step, deployedAddress, onReset }: Dep
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
-            View on Explorer
+            Смотреть в Explorer
           </Link>
-          <button onClick={onReset} className="btn-primary flex items-center justify-center gap-2">
+          <button onClick={onReset} className="btn-secondary flex items-center justify-center gap-2">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
-            Create Another Token
+            Создать еще токен
           </button>
         </div>
 
@@ -75,11 +85,11 @@ export default function DeploymentStatus({ step, deployedAddress, onReset }: Dep
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <div>
-              <h4 className="font-medium text-ton-blue mb-1">What&apos;s Next?</h4>
+              <h4 className="font-medium text-ton-blue mb-1">Что дальше?</h4>
               <ul className="text-sm text-gray-400 space-y-1">
-                <li>• Add your token to DEXes like DeDust or STON.fi</li>
-                <li>• Share your token contract address with your community</li>
-                <li>• Token will appear in wallets automatically when received</li>
+                <li>• Добавьте токен на DEX (DeDust или STON.fi)</li>
+                <li>• Поделитесь адресом контракта с сообществом</li>
+                <li>• Токен автоматически появится в кошельках при получении</li>
               </ul>
             </div>
           </div>
