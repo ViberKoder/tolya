@@ -64,8 +64,12 @@ interface DeployResult {
 
 /**
  * Build metadata URI cell for Jetton 2.0
- * The contract expects a snake-encoded string WITHOUT any prefix.
- * This string is the URI pointing to JSON metadata.
+ * 
+ * IMPORTANT: The contract uses storeStringRefTail in jettonContentToCell()
+ * This means the URI must be stored IN A REF, not directly in the cell!
+ * 
+ * The contract's build_content_cell() function then reads this as a slice
+ * and creates a TEP-64 compliant content dictionary.
  * 
  * We use a data URI to embed the JSON directly, avoiding the need for external hosting.
  * Format: data:application/json,{"name":"...","symbol":"...","description":"...","image":"...","decimals":"9"}
@@ -90,10 +94,11 @@ function buildMetadataUri(metadata: {
   const jsonString = JSON.stringify(jsonMetadata);
   const dataUri = `data:application/json,${encodeURIComponent(jsonString)}`;
   
-  // Store as snake cell using storeStringTail equivalent
-  // This stores the string directly without any prefix
+  // CRITICAL: Use storeStringRefTail to store the URI in a ref
+  // This matches jettonContentToCell() in the official wrapper:
+  // return beginCell().storeStringRefTail(content.uri).endCell();
   return beginCell()
-    .storeStringTail(dataUri)
+    .storeStringRefTail(dataUri)
     .endCell();
 }
 

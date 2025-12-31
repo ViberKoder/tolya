@@ -41,22 +41,28 @@ export function buildMetadataUri(metadata: JettonMetadata): string {
 
 /**
  * Build metadata URI cell for Jetton 2.0 contract
- * Uses storeStringTail to create a snake-encoded string cell
+ * 
+ * IMPORTANT: Must use storeStringRefTail to match jettonContentToCell()
+ * from the official wrapper. This stores the URI in a ref, which is required
+ * because the contract's build_content_cell adds a 0x00 prefix when building
+ * the TEP-64 dictionary. Using storeStringTail would cause cell overflow.
  */
 export function buildMetadataUriCell(metadata: JettonMetadata): Cell {
   const uri = buildMetadataUri(metadata);
   return beginCell()
-    .storeStringTail(uri)
+    .storeStringRefTail(uri)
     .endCell();
 }
 
 /**
  * Build off-chain metadata cell from a URL
  * For cases where you have a hosted JSON file
+ * 
+ * IMPORTANT: Must use storeStringRefTail (see buildMetadataUriCell comment)
  */
 export function buildOffchainMetadataCell(url: string): Cell {
   return beginCell()
-    .storeStringTail(url)
+    .storeStringRefTail(url)
     .endCell();
 }
 
