@@ -18,15 +18,18 @@ interface JettonInfo {
   decimals: number;
 }
 
-// Standard Jetton Operation codes (TonWeb/minter.ton.org compatible)
+// Jetton 2.0 Operation codes (from jetton-contract jetton-2.0 branch)
 const Opcodes = {
-  mint: 21, // Standard mint opcode
-  changeAdmin: 3,
-  changeContent: 4,
+  mint: 0x642b7d07,
+  changeAdmin: 0x6501f354,
+  claimAdmin: 0xfb88e119,
+  dropAdmin: 0x7431f221,
+  changeMetadataUrl: 0xcb862902,
   internalTransfer: 0x178d4519,
   transfer: 0xf8a7ea5,
   burn: 0x595f07bc,
   burnNotification: 0x7bdd97de,
+  topUp: 0xd372158c,
 };
 
 export default function AdminPage() {
@@ -161,23 +164,23 @@ export default function AdminPage() {
       const decimals = jettonInfo?.decimals || 9;
       const amount = BigInt(mintAmount) * BigInt(10 ** decimals);
       
-      // Standard Jetton mint message (TonWeb format)
+      // Jetton 2.0 mint message (from JettonMinter.mintMessage)
       const internalTransferMsg = beginCell()
         .storeUint(Opcodes.internalTransfer, 32)
         .storeUint(0, 64) // query_id
         .storeCoins(amount) // jetton_amount
         .storeAddress(null) // from_address
-        .storeAddress(null) // response_address
-        .storeCoins(0) // forward_ton_amount
-        .storeBit(false) // no forward_payload
+        .storeAddress(wallet) // response_address
+        .storeCoins(toNano('0.01')) // forward_ton_amount
+        .storeMaybeRef(null) // custom_payload
         .endCell();
 
       const mintBody = beginCell()
-        .storeUint(Opcodes.mint, 32) // op = 21
+        .storeUint(Opcodes.mint, 32) // op = 0x642b7d07
         .storeUint(0, 64) // query_id
-        .storeAddress(toAddress) // destination
-        .storeCoins(toNano('0.05')) // forward_ton_amount
-        .storeRef(internalTransferMsg)
+        .storeAddress(toAddress) // to_address
+        .storeCoins(toNano('0.1')) // total_ton_amount
+        .storeRef(internalTransferMsg) // master_msg
         .endCell();
 
       await sendTransaction({
@@ -208,7 +211,8 @@ export default function AdminPage() {
     try {
       const adminAddress = Address.parse(newAdmin);
       
-      // Standard Jetton change_admin (op = 3)
+      // Jetton 2.0 change_admin (op = 0x6501f354)
+      // Sets next_admin, the new admin must call claim_admin to accept
       const changeAdminBody = beginCell()
         .storeUint(Opcodes.changeAdmin, 32)
         .storeUint(0, 64)
@@ -217,11 +221,11 @@ export default function AdminPage() {
 
       await sendTransaction({
         to: contractAddress,
-        value: toNano('0.05').toString(),
+        value: toNano('0.1').toString(),
         body: changeAdminBody.toBoc().toString('base64'),
       });
 
-      toast.success('Права администратора переданы!');
+      toast.success('Запрос на смену администратора отправлен! Новый администратор должен подтвердить права (claim_admin).');
       setNewAdmin('');
     } catch (error: any) {
       toast.error(error.message || 'Ошибка смены администратора');
@@ -235,17 +239,16 @@ export default function AdminPage() {
     }
 
     try {
-      // Standard Jetton: set admin to null address (op = 3 with null address)
-      const revokeAdminBody = beginCell()
-        .storeUint(Opcodes.changeAdmin, 32)
+      // Jetton 2.0 drop_admin (op = 0x7431f221)
+      const dropAdminBody = beginCell()
+        .storeUint(Opcodes.dropAdmin, 32)
         .storeUint(0, 64)
-        .storeAddress(null) // null = no admin
         .endCell();
 
       await sendTransaction({
         to: contractAddress,
         value: toNano('0.05').toString(),
-        body: revokeAdminBody.toBoc().toString('base64'),
+        body: dropAdminBody.toBoc().toString('base64'),
       });
 
       toast.success('Права администратора отозваны! Токен теперь полностью децентрализован.');
@@ -277,7 +280,7 @@ export default function AdminPage() {
   return (
     <>
       <Head>
-        <title>Управление токеном | Jetton Minter</title>
+        <title>Управление токеном | Jetton 2.0 Minter</title>
       </Head>
 
       <div className="min-h-screen flex flex-col">
@@ -294,7 +297,7 @@ export default function AdminPage() {
               Управление <span className="gradient-text">токеном</span>
             </h1>
             <p className="text-gray-400 text-center mb-8">
-              Standard Jetton Admin Panel (DEX Compatible)
+              Jetton 2.0 Admin Panel
             </p>
 
             {/* Contract Address Input */}
@@ -376,17 +379,17 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  {/* Important notice about standard Jetton */}
-                  <div className="mt-4 p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
+                  {/* Important notice about Jetton 2.0 */}
+                  <div className="mt-4 p-4 bg-ton-blue/10 border border-ton-blue/20 rounded-xl">
                     <div className="flex items-start gap-3">
-                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-5 h-5 text-ton-blue flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <div>
-                        <h4 className="font-medium text-green-400 mb-1">Standard Jetton (DEX Compatible)</h4>
+                        <h4 className="font-medium text-ton-blue mb-1">Jetton 2.0 (TEP-74 Compatible)</h4>
                         <p className="text-sm text-gray-400">
-                          Этот токен использует стандартный контракт Jetton, совместимый с DEX биржами (DeDust, STON.fi) и всеми эксплорерами.
-                          Метаданные хранятся on-chain в формате TEP-64.
+                          Этот токен использует контракт Jetton 2.0 из официального репозитория TON.
+                          Полная совместимость с DEX биржами (DeDust, STON.fi) и всеми эксплорерами.
                         </p>
                       </div>
                     </div>
