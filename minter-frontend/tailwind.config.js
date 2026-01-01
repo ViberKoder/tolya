@@ -12,6 +12,17 @@ module.exports = {
         'ton-blue': '#0088CC',
         'ton-blue-dark': '#0077B5',
         'ton-blue-light': '#1DA1F2',
+        // Light theme colors
+        'cook-bg': '#FFFFFF',
+        'cook-bg-secondary': '#F8F9FA',
+        'cook-border': '#E5E7EB',
+        'cook-text': '#1F2937',
+        'cook-text-secondary': '#6B7280',
+        // Orange accent
+        'cook-orange': '#F97316',
+        'cook-orange-dark': '#EA580C',
+        'cook-orange-light': '#FB923C',
+        // Legacy dark theme (keeping for components that need it)
         'ton-black': '#0F0F0F',
         'ton-gray': '#1A1A1A',
         'ton-gray-light': '#2A2A2A',
@@ -25,12 +36,17 @@ module.exports = {
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'gradient-ton': 'linear-gradient(135deg, #0088CC 0%, #00D4FF 100%)',
+        'gradient-cook': 'linear-gradient(135deg, #F97316 0%, #FB923C 100%)',
+        'gradient-cook-soft': 'linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(251, 146, 60, 0.1) 100%)',
         'gradient-dark': 'linear-gradient(180deg, #0F0F0F 0%, #1A1A1A 100%)',
       },
       boxShadow: {
         'ton': '0 4px 60px rgba(0, 136, 204, 0.3)',
         'ton-hover': '0 8px 80px rgba(0, 136, 204, 0.4)',
-        'card': '0 2px 20px rgba(0, 0, 0, 0.3)',
+        'cook': '0 4px 60px rgba(249, 115, 22, 0.2)',
+        'cook-hover': '0 8px 80px rgba(249, 115, 22, 0.3)',
+        'card': '0 2px 20px rgba(0, 0, 0, 0.08)',
+        'card-hover': '0 4px 40px rgba(0, 0, 0, 0.12)',
       },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
