@@ -16,10 +16,12 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
     decimals: 9,
     totalSupply: '1000000',
     mintable: true,
+    metadataUrl: '',
   });
 
   const [imagePreview, setImagePreview] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'basic' | 'advanced'>('basic');
+  const [metadataMode, setMetadataMode] = useState<'auto' | 'manual'>('auto');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -49,22 +51,46 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // If manual mode, require metadata URL
+    if (metadataMode === 'manual' && !formData.metadataUrl) {
+      alert('Please provide a metadata URL');
+      return;
+    }
+    
     onDeploy(formData);
   };
 
   const isValid = formData.name.trim() && formData.symbol.trim() && formData.totalSupply;
 
+  // Generate metadata JSON for user to host
+  const generateMetadataJson = () => {
+    const metadata = {
+      name: formData.name,
+      symbol: formData.symbol.toUpperCase(),
+      description: formData.description || formData.name,
+      image: formData.image || '',
+      decimals: formData.decimals.toString(),
+    };
+    return JSON.stringify(metadata, null, 2);
+  };
+
+  const copyMetadataJson = () => {
+    navigator.clipboard.writeText(generateMetadataJson());
+    alert('Metadata JSON copied to clipboard!');
+  };
+
   return (
     <form onSubmit={handleSubmit} className="card">
       {/* Tabs */}
-      <div className="flex space-x-2 mb-8 p-1 bg-ton-gray-light rounded-xl">
+      <div className="flex space-x-2 mb-8 p-1 bg-cook-bg-secondary rounded-xl">
         <button
           type="button"
           onClick={() => setActiveTab('basic')}
           className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
             activeTab === 'basic'
               ? 'bg-gradient-ton text-white shadow-ton'
-              : 'text-gray-400 hover:text-white'
+              : 'text-cook-text-secondary hover:text-cook-text'
           }`}
         >
           Basic Info
@@ -75,7 +101,7 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
           className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
             activeTab === 'advanced'
               ? 'bg-gradient-ton text-white shadow-ton'
-              : 'text-gray-400 hover:text-white'
+              : 'text-cook-text-secondary hover:text-cook-text'
           }`}
         >
           Advanced
@@ -87,7 +113,7 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
           {/* Token Name & Symbol */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-cook-text mb-2">
                 Token Name <span className="text-ton-blue">*</span>
               </label>
               <input
@@ -99,10 +125,10 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
                 className="input-ton"
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">The full name of your token</p>
+              <p className="text-xs text-cook-text-secondary mt-1">The full name of your token</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-cook-text mb-2">
                 Symbol <span className="text-ton-blue">*</span>
               </label>
               <input
@@ -115,13 +141,13 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
                 maxLength={10}
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">3-5 characters recommended</p>
+              <p className="text-xs text-cook-text-secondary mt-1">3-5 characters recommended</p>
             </div>
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-cook-text mb-2">
               Description
             </label>
             <textarea
@@ -136,7 +162,7 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
 
           {/* Image URL with Preview */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-cook-text mb-2">
               Token Image URL
             </label>
             <div className="flex gap-4">
@@ -149,9 +175,9 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
                   placeholder="https://example.com/token-logo.png"
                   className="input-ton"
                 />
-                <p className="text-xs text-gray-500 mt-1">PNG or JPEG, 256x256px recommended</p>
+                <p className="text-xs text-cook-text-secondary mt-1">PNG or JPEG, 256x256px recommended. Must be publicly accessible URL.</p>
               </div>
-              <div className="w-20 h-20 rounded-xl bg-ton-gray-light border border-ton-gray-light overflow-hidden flex items-center justify-center flex-shrink-0">
+              <div className="w-20 h-20 rounded-xl bg-cook-bg-secondary border border-cook-border overflow-hidden flex items-center justify-center flex-shrink-0">
                 {imagePreview ? (
                   <img 
                     src={imagePreview} 
@@ -160,7 +186,7 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
                     onError={() => setImagePreview('')}
                   />
                 ) : (
-                  <svg className="w-8 h-8 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-8 h-8 text-cook-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 )}
@@ -170,7 +196,7 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
 
           {/* Total Supply */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-cook-text mb-2">
               Total Supply <span className="text-ton-blue">*</span>
             </label>
             <input
@@ -182,7 +208,7 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
               className="input-ton"
               required
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-cook-text-secondary mt-1">
               Total number of tokens to mint (without decimals)
             </p>
           </div>
@@ -191,7 +217,7 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
         <div className="space-y-6">
           {/* Decimals */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-cook-text mb-2">
               Decimals
             </label>
             <input
@@ -203,16 +229,79 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
               max={18}
               className="input-ton"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-cook-text-secondary mt-1">
               Number of decimal places (9 is standard for TON tokens)
             </p>
           </div>
 
-          {/* Mintable */}
-          <div className="flex items-center justify-between p-4 bg-ton-gray-light rounded-xl">
+          {/* Metadata Mode Selection */}
+          <div className="p-4 bg-cook-bg-secondary rounded-xl border border-cook-border">
+            <h4 className="font-medium text-cook-text mb-3">Metadata Hosting</h4>
+            <div className="flex gap-4">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="metadataMode"
+                  checked={metadataMode === 'auto'}
+                  onChange={() => setMetadataMode('auto')}
+                  className="mr-2"
+                />
+                <span className="text-sm text-cook-text">Use IPFS (recommended)</span>
+              </label>
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="metadataMode"
+                  checked={metadataMode === 'manual'}
+                  onChange={() => setMetadataMode('manual')}
+                  className="mr-2"
+                />
+                <span className="text-sm text-cook-text">Provide my own URL</span>
+              </label>
+            </div>
+          </div>
+
+          {metadataMode === 'manual' && (
             <div>
-              <h4 className="font-medium text-white">Mintable</h4>
-              <p className="text-sm text-gray-400">Allow minting additional tokens after deployment</p>
+              <label className="block text-sm font-medium text-cook-text mb-2">
+                Metadata URL <span className="text-ton-blue">*</span>
+              </label>
+              <input
+                type="url"
+                name="metadataUrl"
+                value={formData.metadataUrl}
+                onChange={handleChange}
+                placeholder="https://example.com/metadata.json"
+                className="input-ton"
+              />
+              <p className="text-xs text-cook-text-secondary mt-1">
+                URL to your JSON metadata file. Must be publicly accessible.
+              </p>
+
+              {/* Show the JSON that needs to be hosted */}
+              <div className="mt-4 p-4 bg-cook-bg-secondary rounded-xl border border-cook-border">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-cook-text">Your metadata JSON:</span>
+                  <button
+                    type="button"
+                    onClick={copyMetadataJson}
+                    className="text-xs text-ton-blue hover:underline"
+                  >
+                    Copy to clipboard
+                  </button>
+                </div>
+                <pre className="text-xs text-cook-text-secondary overflow-x-auto p-2 bg-white rounded border border-cook-border">
+                  {generateMetadataJson()}
+                </pre>
+              </div>
+            </div>
+          )}
+
+          {/* Mintable */}
+          <div className="flex items-center justify-between p-4 bg-cook-bg-secondary rounded-xl border border-cook-border">
+            <div>
+              <h4 className="font-medium text-cook-text">Mintable</h4>
+              <p className="text-sm text-cook-text-secondary">Allow minting additional tokens after deployment</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -222,7 +311,7 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
                 onChange={handleChange}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-ton-gray rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-ton-blue"></div>
+              <div className="w-11 h-6 bg-cook-border rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-cook-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-ton-blue"></div>
             </label>
           </div>
 
@@ -233,25 +322,27 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <div>
-                <h4 className="font-medium text-ton-blue mb-1">Jetton 2.0</h4>
-                <p className="text-sm text-gray-400">
-                  Токен создается по стандарту Jetton 2.0 из официального репозитория TON. 
-                  Полная совместимость с DeDust, STON.fi и всеми кошельками/эксплорерами.
+                <h4 className="font-medium text-ton-blue mb-1">Jetton 2.0 Standard</h4>
+                <p className="text-sm text-cook-text-secondary">
+                  Your token uses the official Jetton 2.0 contract from TON Core. 
+                  Fully compatible with DeDust, STON.fi, and all wallets/explorers.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Warning about immutable metadata */}
-          <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+          {/* Metadata hosting info */}
+          <div className="p-4 bg-cook-orange/10 border border-cook-orange/20 rounded-xl">
             <div className="flex items-start gap-3">
-              <svg className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 text-cook-orange flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
               <div>
-                <h4 className="font-medium text-yellow-400 mb-1">Важно!</h4>
-                <p className="text-sm text-gray-400">
-                  Название, тикер, описание и аватарка <strong className="text-yellow-400">не могут быть изменены</strong> после создания токена. Убедитесь, что все данные введены правильно!
+                <h4 className="font-medium text-cook-orange mb-1">Metadata Hosting Required</h4>
+                <p className="text-sm text-cook-text-secondary">
+                  Jetton 2.0 requires off-chain metadata (JSON file hosted at a URL). 
+                  You can use <a href="https://nft.storage" target="_blank" className="text-ton-blue hover:underline">NFT.Storage</a> (free IPFS) 
+                  or any web server. The JSON must contain: name, symbol, description, image, decimals.
                 </p>
               </div>
             </div>
@@ -261,23 +352,23 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
 
       {/* Error Message */}
       {error && (
-        <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+        <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl">
           <div className="flex items-center gap-3">
             <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p className="text-red-400">{error}</p>
+            <p className="text-red-600">{error}</p>
           </div>
         </div>
       )}
 
       {/* Summary & Submit */}
-      <div className="mt-8 pt-6 border-t border-ton-gray-light">
+      <div className="mt-8 pt-6 border-t border-cook-border">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-center md:text-left">
-            <p className="text-gray-400 text-sm">Стоимость создания токена</p>
-            <p className="text-white font-semibold">1 TON</p>
-            <p className="text-xs text-gray-500">0.2 TON на деплой • 0.8 TON сервисный сбор</p>
+            <p className="text-cook-text-secondary text-sm">Deployment cost</p>
+            <p className="text-cook-text font-semibold">1 TON</p>
+            <p className="text-xs text-cook-text-secondary">0.2 TON for deploy + 0.8 TON service fee</p>
           </div>
           
           <button
@@ -294,10 +385,12 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
               </>
             ) : (
               <>
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Create Jetton
+                <img 
+                  src="https://em-content.zobj.net/source/telegram/386/poultry-leg_1f357.webp" 
+                  alt="" 
+                  className="w-5 h-5"
+                />
+                Cook Jetton
               </>
             )}
           </button>

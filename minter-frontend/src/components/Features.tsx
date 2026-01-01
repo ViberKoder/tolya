@@ -6,8 +6,8 @@ export default function Features() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
       ),
-      title: 'Lightning Fast',
-      description: 'Deploy your token in seconds with TON\'s high-speed blockchain.',
+      title: '3x Faster',
+      description: 'Jetton 2.0 transactions are up to 3 times faster than Jetton 1.0.',
     },
     {
       icon: (
@@ -15,8 +15,8 @@ export default function Features() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
         </svg>
       ),
-      title: 'Secure & Audited',
-      description: 'Built on the official Jetton 2.0 standard with battle-tested contracts.',
+      title: 'Official Standard',
+      description: 'Built on the official Jetton 2.0 contract from TON Core team.',
     },
     {
       icon: (
@@ -25,7 +25,7 @@ export default function Features() {
         </svg>
       ),
       title: 'Low Cost',
-      description: 'Deploy for ~0.1 TON with minimal gas fees for all operations.',
+      description: 'Deploy for just 1 TON including all fees.',
     },
     {
       icon: (
@@ -34,7 +34,7 @@ export default function Features() {
         </svg>
       ),
       title: 'Full Compatibility',
-      description: 'Works with all TON wallets, DEXes, and dApps out of the box.',
+      description: 'Works with DeDust, STON.fi, and all TON wallets.',
     },
     {
       icon: (
@@ -44,7 +44,7 @@ export default function Features() {
         </svg>
       ),
       title: 'Customizable',
-      description: 'Set your token name, symbol, decimals, and total supply.',
+      description: 'Set your token name, symbol, decimals, and supply.',
     },
     {
       icon: (
@@ -52,8 +52,8 @@ export default function Features() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
         </svg>
       ),
-      title: 'Admin Control',
-      description: 'Manage minting, burn tokens, and transfer admin rights.',
+      title: 'Admin Panel',
+      description: 'Manage minting, transfers, and admin rights.',
     },
   ];
 
@@ -61,12 +61,12 @@ export default function Features() {
     <section className="py-16 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            Why Choose <span className="gradient-text">Jetton 2.0</span>?
+          <h2 className="text-3xl md:text-4xl font-bold text-cook-text mb-4">
+            Why <span className="gradient-text">Jetton 2.0</span>?
           </h2>
-          <p className="text-gray-400 max-w-2xl mx-auto">
+          <p className="text-cook-text-secondary max-w-2xl mx-auto">
             The latest standard for fungible tokens on TON, designed for maximum 
-            security, compatibility, and efficiency.
+            performance, security, and compatibility.
           </p>
         </div>
 
@@ -79,8 +79,8 @@ export default function Features() {
               <div className="w-14 h-14 rounded-xl bg-ton-blue/10 flex items-center justify-center text-ton-blue mb-4 group-hover:bg-ton-blue group-hover:text-white transition-all">
                 {feature.icon}
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
-              <p className="text-gray-400 text-sm">{feature.description}</p>
+              <h3 className="text-lg font-semibold text-cook-text mb-2">{feature.title}</h3>
+              <p className="text-cook-text-secondary text-sm">{feature.description}</p>
             </div>
           ))}
         </div>
@@ -88,14 +88,14 @@ export default function Features() {
         {/* Stats */}
         <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6">
           {[
-            { value: '1M+', label: 'Tokens Created' },
+            { value: '3x', label: 'Faster' },
             { value: '<1s', label: 'Deploy Time' },
-            { value: '0.1', label: 'TON to Deploy' },
-            { value: '100%', label: 'Decentralized' },
+            { value: '1 TON', label: 'Total Cost' },
+            { value: '100%', label: 'Compatible' },
           ].map((stat, index) => (
             <div key={index} className="text-center">
               <p className="text-3xl md:text-4xl font-bold gradient-text mb-2">{stat.value}</p>
-              <p className="text-gray-400 text-sm">{stat.label}</p>
+              <p className="text-cook-text-secondary text-sm">{stat.label}</p>
             </div>
           ))}
         </div>

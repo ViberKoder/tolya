@@ -56,7 +56,7 @@ export default function AdminPage() {
 
   const handleLoadJetton = useCallback(async (showToast = true) => {
     if (!contractAddress) {
-      if (showToast) toast.error('Введите адрес контракта');
+      if (showToast) toast.error('Please enter a contract address');
       return;
     }
 
@@ -77,11 +77,11 @@ export default function AdminPage() {
         // Try alternative API endpoint
         const altResponse = await fetch(`https://toncenter.com/api/v3/jetton/masters?address=${address.toString()}&limit=1`);
         if (!altResponse.ok) {
-          throw new Error('Токен не найден');
+          throw new Error('Token not found');
         }
         const altData = await altResponse.json();
         if (!altData.jetton_masters || altData.jetton_masters.length === 0) {
-          throw new Error('Токен не найден');
+          throw new Error('Token not found');
         }
         const master = altData.jetton_masters[0];
         const info: JettonInfo = {
@@ -96,7 +96,7 @@ export default function AdminPage() {
         };
         setJettonInfo(info);
         loadedAddressRef.current = contractAddress;
-        if (showToast) toast.success('Информация о токене загружена');
+        if (showToast) toast.success('Token info loaded');
         return;
       }
       
@@ -116,10 +116,10 @@ export default function AdminPage() {
       setJettonInfo(info);
       loadedAddressRef.current = contractAddress;
       
-      if (showToast) toast.success('Информация о токене загружена');
+      if (showToast) toast.success('Token info loaded');
     } catch (error: any) {
       console.error('Failed to load jetton:', error);
-      if (showToast) toast.error(error.message || 'Не удалось загрузить информацию о токене');
+      if (showToast) toast.error(error.message || 'Failed to load token info');
       
       // Set empty state for new tokens that aren't indexed yet
       if (!jettonInfo) {
@@ -127,9 +127,9 @@ export default function AdminPage() {
           totalSupply: '0',
           adminAddress: wallet?.toString() || null,
           mintable: true,
-          name: 'Новый токен',
+          name: 'New Token',
           symbol: '???',
-          description: 'Токен еще не проиндексирован. Попробуйте обновить через несколько минут.',
+          description: 'Token not yet indexed. Try refreshing in a few minutes.',
           image: '',
           decimals: 9,
         });
@@ -150,12 +150,12 @@ export default function AdminPage() {
 
   const handleMint = async () => {
     if (!connected || !wallet) {
-      toast.error('Подключите кошелек');
+      toast.error('Please connect your wallet');
       return;
     }
 
     if (!mintAmount || !mintTo) {
-      toast.error('Заполните все поля');
+      toast.error('Please fill all fields');
       return;
     }
 
@@ -189,22 +189,22 @@ export default function AdminPage() {
         body: mintBody.toBoc().toString('base64'),
       });
 
-      toast.success('Транзакция минтинга отправлена!');
+      toast.success('Mint transaction sent!');
       setMintAmount('');
       setMintTo('');
     } catch (error: any) {
-      toast.error(error.message || 'Ошибка минтинга');
+      toast.error(error.message || 'Mint error');
     }
   };
 
   const handleChangeAdmin = async () => {
     if (!connected || !wallet) {
-      toast.error('Подключите кошелек');
+      toast.error('Please connect your wallet');
       return;
     }
 
     if (!newAdmin) {
-      toast.error('Введите адрес нового администратора');
+      toast.error('Please enter new admin address');
       return;
     }
 
@@ -225,16 +225,16 @@ export default function AdminPage() {
         body: changeAdminBody.toBoc().toString('base64'),
       });
 
-      toast.success('Запрос на смену администратора отправлен! Новый администратор должен подтвердить права (claim_admin).');
+      toast.success('Admin change request sent! New admin must confirm (claim_admin).');
       setNewAdmin('');
     } catch (error: any) {
-      toast.error(error.message || 'Ошибка смены администратора');
+      toast.error(error.message || 'Admin change error');
     }
   };
 
   const handleRevokeAdmin = async () => {
     if (!connected || !wallet) {
-      toast.error('Подключите кошелек');
+      toast.error('Please connect your wallet');
       return;
     }
 
@@ -251,9 +251,9 @@ export default function AdminPage() {
         body: dropAdminBody.toBoc().toString('base64'),
       });
 
-      toast.success('Права администратора отозваны! Токен теперь полностью децентрализован.');
+      toast.success('Admin rights revoked! Token is now fully decentralized.');
     } catch (error: any) {
-      toast.error(error.message || 'Ошибка отзыва прав');
+      toast.error(error.message || 'Revoke error');
     }
   };
 
@@ -280,30 +280,31 @@ export default function AdminPage() {
   return (
     <>
       <Head>
-        <title>Управление токеном | Jetton 2.0 Minter</title>
+        <title>Manage Token | Cook</title>
+        <link rel="icon" href="https://em-content.zobj.net/source/telegram/386/poultry-leg_1f357.webp" />
       </Head>
 
       <div className="min-h-screen flex flex-col">
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-ton-blue/10 rounded-full blur-3xl animate-blob" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-blob animation-delay-2000" />
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-cook-orange/5 rounded-full blur-3xl animate-blob" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-ton-blue/5 rounded-full blur-3xl animate-blob animation-delay-2000" />
         </div>
 
         <Header />
 
         <main className="flex-grow relative z-10 pt-24 pb-12 px-4">
           <div className="max-w-4xl mx-auto">
-            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 text-center">
-              Управление <span className="gradient-text">токеном</span>
+            <h1 className="text-3xl md:text-4xl font-bold text-cook-text mb-2 text-center">
+              Manage <span className="gradient-text">Token</span>
             </h1>
-            <p className="text-gray-400 text-center mb-8">
+            <p className="text-cook-text-secondary text-center mb-8">
               Jetton 2.0 Admin Panel
             </p>
 
             {/* Contract Address Input */}
             <div className="card mb-8">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Адрес контракта
+              <label className="block text-sm font-medium text-cook-text mb-2">
+                Contract Address
               </label>
               <div className="flex gap-4">
                 <input
@@ -313,7 +314,7 @@ export default function AdminPage() {
                     setContractAddress(e.target.value);
                     loadedAddressRef.current = '';
                   }}
-                  placeholder="EQ... или UQ..."
+                  placeholder="EQ... or UQ..."
                   className="input-ton flex-grow"
                 />
                 <button
@@ -324,10 +325,10 @@ export default function AdminPage() {
                   {loading ? (
                     <span className="flex items-center gap-2">
                       <div className="spinner" />
-                      Загрузка...
+                      Loading...
                     </span>
                   ) : (
-                    'Загрузить'
+                    'Load'
                   )}
                 </button>
               </div>
@@ -338,7 +339,7 @@ export default function AdminPage() {
                 {/* Token Preview Card */}
                 <div className="card mb-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-xl bg-ton-gray-light overflow-hidden flex-shrink-0">
+                    <div className="w-16 h-16 rounded-xl bg-cook-bg-secondary overflow-hidden flex-shrink-0 border border-cook-border">
                       {jettonInfo.image ? (
                         <img 
                           src={jettonInfo.image} 
@@ -347,24 +348,24 @@ export default function AdminPage() {
                           onError={(e) => (e.currentTarget.style.display = 'none')}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-gray-500">
+                        <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-cook-text-secondary">
                           {jettonInfo.symbol?.charAt(0) || '?'}
                         </div>
                       )}
                     </div>
                     <div className="flex-grow">
-                      <h3 className="text-xl font-bold text-white">{jettonInfo.name || 'Unnamed Token'}</h3>
-                      <p className="text-gray-400">${jettonInfo.symbol || 'UNKNOWN'}</p>
+                      <h3 className="text-xl font-bold text-cook-text">{jettonInfo.name || 'Unnamed Token'}</h3>
+                      <p className="text-cook-text-secondary">${jettonInfo.symbol || 'UNKNOWN'}</p>
                     </div>
                     <div className="flex flex-col gap-2 items-end">
                       {isAdmin && (
-                        <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm font-medium">
-                          Вы администратор
+                        <span className="px-3 py-1 bg-green-100 text-green-600 rounded-full text-sm font-medium">
+                          You are Admin
                         </span>
                       )}
                       {!jettonInfo.adminAddress && (
-                        <span className="px-3 py-1 bg-gray-500/20 text-gray-400 rounded-full text-sm font-medium">
-                          Децентрализован
+                        <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm font-medium">
+                          Decentralized
                         </span>
                       )}
                       <button
@@ -374,7 +375,7 @@ export default function AdminPage() {
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
-                        Обновить
+                        Refresh
                       </button>
                     </div>
                   </div>
@@ -387,9 +388,9 @@ export default function AdminPage() {
                       </svg>
                       <div>
                         <h4 className="font-medium text-ton-blue mb-1">Jetton 2.0 (TEP-74 Compatible)</h4>
-                        <p className="text-sm text-gray-400">
-                          Этот токен использует контракт Jetton 2.0 из официального репозитория TON.
-                          Полная совместимость с DEX биржами (DeDust, STON.fi) и всеми эксплорерами.
+                        <p className="text-sm text-cook-text-secondary">
+                          This token uses the official Jetton 2.0 contract from TON Core.
+                          Fully compatible with DEX (DeDust, STON.fi) and all explorers.
                         </p>
                       </div>
                     </div>
@@ -397,11 +398,11 @@ export default function AdminPage() {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex space-x-2 mb-6 p-1 bg-ton-gray rounded-xl overflow-x-auto">
+                <div className="flex space-x-2 mb-6 p-1 bg-cook-bg-secondary rounded-xl overflow-x-auto">
                   {[
-                    { id: 'info', label: 'Информация' },
-                    { id: 'mint', label: 'Минтинг' },
-                    { id: 'admin', label: 'Администрирование' },
+                    { id: 'info', label: 'Info' },
+                    { id: 'mint', label: 'Mint' },
+                    { id: 'admin', label: 'Admin' },
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -409,7 +410,7 @@ export default function AdminPage() {
                       className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all whitespace-nowrap ${
                         activeTab === tab.id
                           ? 'bg-gradient-ton text-white shadow-ton'
-                          : 'text-gray-400 hover:text-white'
+                          : 'text-cook-text-secondary hover:text-cook-text'
                       }`}
                     >
                       {tab.label}
@@ -420,44 +421,44 @@ export default function AdminPage() {
                 <div className="card">
                   {activeTab === 'info' && (
                     <div className="space-y-4">
-                      <div className="flex justify-between items-center py-3 border-b border-ton-gray-light">
-                        <span className="text-gray-400">Название</span>
-                        <span className="text-white font-medium">{jettonInfo.name || '—'}</span>
+                      <div className="flex justify-between items-center py-3 border-b border-cook-border">
+                        <span className="text-cook-text-secondary">Name</span>
+                        <span className="text-cook-text font-medium">{jettonInfo.name || '—'}</span>
                       </div>
-                      <div className="flex justify-between items-center py-3 border-b border-ton-gray-light">
-                        <span className="text-gray-400">Тикер</span>
-                        <span className="text-white font-medium">{jettonInfo.symbol || '—'}</span>
+                      <div className="flex justify-between items-center py-3 border-b border-cook-border">
+                        <span className="text-cook-text-secondary">Symbol</span>
+                        <span className="text-cook-text font-medium">{jettonInfo.symbol || '—'}</span>
                       </div>
-                      <div className="flex justify-between items-center py-3 border-b border-ton-gray-light">
-                        <span className="text-gray-400">Описание</span>
-                        <span className="text-white font-medium text-right max-w-[250px]">
+                      <div className="flex justify-between items-center py-3 border-b border-cook-border">
+                        <span className="text-cook-text-secondary">Description</span>
+                        <span className="text-cook-text font-medium text-right max-w-[250px]">
                           {jettonInfo.description || '—'}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center py-3 border-b border-ton-gray-light">
-                        <span className="text-gray-400">Total Supply</span>
-                        <span className="text-white font-medium">
+                      <div className="flex justify-between items-center py-3 border-b border-cook-border">
+                        <span className="text-cook-text-secondary">Total Supply</span>
+                        <span className="text-cook-text font-medium">
                           {formatSupply(jettonInfo.totalSupply, jettonInfo.decimals)} {jettonInfo.symbol}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center py-3 border-b border-ton-gray-light">
-                        <span className="text-gray-400">Decimals</span>
-                        <span className="text-white font-medium">{jettonInfo.decimals}</span>
+                      <div className="flex justify-between items-center py-3 border-b border-cook-border">
+                        <span className="text-cook-text-secondary">Decimals</span>
+                        <span className="text-cook-text font-medium">{jettonInfo.decimals}</span>
                       </div>
-                      <div className="flex justify-between items-center py-3 border-b border-ton-gray-light">
-                        <span className="text-gray-400">Mintable</span>
-                        <span className={`font-medium ${jettonInfo.adminAddress ? 'text-green-400' : 'text-red-400'}`}>
-                          {jettonInfo.adminAddress ? 'Да' : 'Нет (децентрализован)'}
+                      <div className="flex justify-between items-center py-3 border-b border-cook-border">
+                        <span className="text-cook-text-secondary">Mintable</span>
+                        <span className={`font-medium ${jettonInfo.adminAddress ? 'text-green-600' : 'text-red-500'}`}>
+                          {jettonInfo.adminAddress ? 'Yes' : 'No (decentralized)'}
                         </span>
                       </div>
                       <div className="flex justify-between items-center py-3">
-                        <span className="text-gray-400">Администратор</span>
+                        <span className="text-cook-text-secondary">Admin</span>
                         {jettonInfo.adminAddress ? (
                           <code className="text-ton-blue text-sm">
                             {jettonInfo.adminAddress.slice(0, 8)}...{jettonInfo.adminAddress.slice(-6)}
                           </code>
                         ) : (
-                          <span className="text-gray-500">Отсутствует (децентрализован)</span>
+                          <span className="text-cook-text-secondary">None (decentralized)</span>
                         )}
                       </div>
                     </div>
@@ -466,24 +467,24 @@ export default function AdminPage() {
                   {activeTab === 'mint' && (
                     <div className="space-y-6">
                       {!isAdmin && jettonInfo.adminAddress && (
-                        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
-                          <p className="text-red-400 text-sm">
-                            Вы не являетесь администратором этого токена и не можете минтить.
+                        <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                          <p className="text-red-600 text-sm">
+                            You are not the admin of this token and cannot mint.
                           </p>
                         </div>
                       )}
 
                       {!jettonInfo.adminAddress && (
-                        <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
-                          <p className="text-yellow-400 text-sm">
-                            Этот токен децентрализован. Права администратора отозваны, минтинг невозможен.
+                        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+                          <p className="text-yellow-700 text-sm">
+                            This token is decentralized. Admin rights have been revoked, minting is not possible.
                           </p>
                         </div>
                       )}
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Количество токенов
+                        <label className="block text-sm font-medium text-cook-text mb-2">
+                          Amount to Mint
                         </label>
                         <input
                           type="text"
@@ -493,13 +494,13 @@ export default function AdminPage() {
                           className="input-ton"
                           disabled={!isAdmin}
                         />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Без учета decimals (токен с 9 decimals: 1000000 = 1,000,000 токенов)
+                        <p className="text-xs text-cook-text-secondary mt-1">
+                          Without decimals (for 9 decimals: 1000000 = 1,000,000 tokens)
                         </p>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Адрес получателя
+                        <label className="block text-sm font-medium text-cook-text mb-2">
+                          Recipient Address
                         </label>
                         <input
                           type="text"
@@ -514,7 +515,7 @@ export default function AdminPage() {
                             onClick={() => setMintTo(wallet.toString())}
                             className="text-sm text-ton-blue hover:underline mt-1"
                           >
-                            Использовать мой адрес
+                            Use my address
                           </button>
                         )}
                       </div>
@@ -523,7 +524,7 @@ export default function AdminPage() {
                         disabled={!connected || !mintAmount || !mintTo || !isAdmin}
                         className="btn-primary w-full"
                       >
-                        Минтить токены
+                        Mint Tokens
                       </button>
                     </div>
                   )}
@@ -531,23 +532,23 @@ export default function AdminPage() {
                   {activeTab === 'admin' && (
                     <div className="space-y-6">
                       {!isAdmin && jettonInfo.adminAddress && (
-                        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
-                          <p className="text-red-400 text-sm">
-                            Вы не являетесь администратором этого токена.
+                        <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                          <p className="text-red-600 text-sm">
+                            You are not the admin of this token.
                           </p>
                         </div>
                       )}
 
                       {!jettonInfo.adminAddress && (
-                        <div className="p-4 bg-gray-500/10 border border-gray-500/20 rounded-xl">
+                        <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
                           <div className="flex items-center gap-3">
-                            <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className="w-8 h-8 text-cook-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                             </svg>
                             <div>
-                              <h4 className="font-medium text-white">Токен децентрализован</h4>
-                              <p className="text-gray-400 text-sm">
-                                У этого токена нет администратора. Он полностью децентрализован и никто не может его контролировать.
+                              <h4 className="font-medium text-cook-text">Token is Decentralized</h4>
+                              <p className="text-cook-text-secondary text-sm">
+                                This token has no admin. It is fully decentralized and cannot be controlled by anyone.
                               </p>
                             </div>
                           </div>
@@ -557,14 +558,14 @@ export default function AdminPage() {
                       {isAdmin && (
                         <>
                           {/* Change Admin */}
-                          <div className="p-6 bg-ton-gray-light rounded-xl">
-                            <h4 className="font-semibold text-white mb-2">Передать права администратора</h4>
-                            <p className="text-sm text-gray-400 mb-4">
-                              Передайте права администратора на другой адрес. Новый администратор сразу получит полный контроль.
+                          <div className="p-6 bg-cook-bg-secondary rounded-xl border border-cook-border">
+                            <h4 className="font-semibold text-cook-text mb-2">Transfer Admin Rights</h4>
+                            <p className="text-sm text-cook-text-secondary mb-4">
+                              Transfer admin rights to another address. The new admin must confirm to accept.
                             </p>
                             <div>
-                              <label className="block text-sm font-medium text-gray-300 mb-2">
-                                Адрес нового администратора
+                              <label className="block text-sm font-medium text-cook-text mb-2">
+                                New Admin Address
                               </label>
                               <input
                                 type="text"
@@ -579,35 +580,35 @@ export default function AdminPage() {
                               disabled={!connected || !newAdmin}
                               className="btn-primary w-full mt-4"
                             >
-                              Передать права
+                              Transfer Rights
                             </button>
                           </div>
 
                           {/* Revoke Admin (Danger Zone) */}
-                          <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-xl">
+                          <div className="p-6 bg-red-50 border border-red-200 rounded-xl">
                             <div className="flex items-start gap-3 mb-4">
                               <svg className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                               </svg>
                               <div>
-                                <h4 className="font-semibold text-red-400">Опасная зона</h4>
-                                <p className="text-sm text-gray-400 mt-1">
-                                  Отзыв прав администратора сделает токен полностью децентрализованным. 
-                                  После этого:
+                                <h4 className="font-semibold text-red-600">Danger Zone</h4>
+                                <p className="text-sm text-cook-text-secondary mt-1">
+                                  Revoking admin rights will make the token fully decentralized. 
+                                  After this:
                                 </p>
-                                <ul className="text-sm text-gray-400 mt-2 space-y-1 list-disc list-inside">
-                                  <li>Никто не сможет минтить новые токены</li>
-                                  <li>Метаданные останутся неизменными навсегда</li>
-                                  <li>Это действие <strong className="text-red-400">НЕОБРАТИМО</strong></li>
+                                <ul className="text-sm text-cook-text-secondary mt-2 space-y-1 list-disc list-inside">
+                                  <li>No one can mint new tokens</li>
+                                  <li>Metadata will remain unchanged forever</li>
+                                  <li>This action is <strong className="text-red-600">IRREVERSIBLE</strong></li>
                                 </ul>
                               </div>
                             </div>
                             <button
                               onClick={handleRevokeAdmin}
                               disabled={!connected}
-                              className="w-full py-3 px-6 bg-red-500/20 hover:bg-red-500/30 text-red-400 font-semibold rounded-xl transition-colors border border-red-500/30"
+                              className="w-full py-3 px-6 bg-red-100 hover:bg-red-200 text-red-600 font-semibold rounded-xl transition-colors border border-red-300"
                             >
-                              🔒 Отозвать права администратора
+                              🔒 Revoke Admin Rights
                             </button>
                           </div>
                         </>
@@ -620,11 +621,11 @@ export default function AdminPage() {
 
             {!connected && (
               <div className="card text-center">
-                <svg className="w-16 h-16 mx-auto mb-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-16 h-16 mx-auto mb-4 text-cook-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
-                <h3 className="text-xl font-semibold text-white mb-2">Подключите кошелек</h3>
-                <p className="text-gray-400">Подключите кошелек для управления токенами</p>
+                <h3 className="text-xl font-semibold text-cook-text mb-2">Connect Wallet</h3>
+                <p className="text-cook-text-secondary">Connect your wallet to manage tokens</p>
               </div>
             )}
           </div>
