@@ -5,6 +5,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useTonConnect } from '@/hooks/useTonConnect';
 import { Address, toNano, beginCell } from '@ton/core';
+import { buildOnchainMetadataCell, buildOffchainMetadataCell, buildChangeMetadataMessage } from '@/utils/onchain-metadata';
 import toast from 'react-hot-toast';
 
 interface JettonInfo {
@@ -18,7 +19,7 @@ interface JettonInfo {
   decimals: number;
 }
 
-// Jetton 2.0 Operation codes (from jetton-contract jetton-2.0 branch)
+// Jetton 2.0 Operation codes
 const Opcodes = {
   mint: 0x642b7d07,
   changeAdmin: 0x6501f354,
@@ -26,10 +27,6 @@ const Opcodes = {
   dropAdmin: 0x7431f221,
   changeMetadataUrl: 0xcb862902,
   internalTransfer: 0x178d4519,
-  transfer: 0xf8a7ea5,
-  burn: 0x595f07bc,
-  burnNotification: 0x7bdd97de,
-  topUp: 0xd372158c,
 };
 
 export default function AdminPage() {
@@ -41,13 +38,20 @@ export default function AdminPage() {
   const [mintAmount, setMintAmount] = useState('');
   const [mintTo, setMintTo] = useState('');
   const [newAdmin, setNewAdmin] = useState('');
-  const [activeTab, setActiveTab] = useState<'info' | 'mint' | 'admin'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'mint' | 'metadata' | 'admin'>('info');
   
-  // Prevent double loading
+  // Metadata editing
+  const [newName, setNewName] = useState('');
+  const [newSymbol, setNewSymbol] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [newImage, setNewImage] = useState('');
+  const [newDecimals, setNewDecimals] = useState('9');
+  const [useOffchainUrl, setUseOffchainUrl] = useState(false);
+  const [offchainUrl, setOffchainUrl] = useState('');
+  
   const loadedAddressRef = useRef<string>('');
   const isLoadingRef = useRef(false);
 
-  // Load address from URL query parameter
   useEffect(() => {
     if (router.query.address && typeof router.query.address === 'string') {
       setContractAddress(router.query.address);
@@ -60,7 +64,6 @@ export default function AdminPage() {
       return;
     }
 
-    // Prevent double loading
     if (isLoadingRef.current) return;
     if (loadedAddressRef.current === contractAddress && jettonInfo) return;
 
@@ -69,12 +72,9 @@ export default function AdminPage() {
     
     try {
       const address = Address.parse(contractAddress);
-      
-      // Fetch real jetton data from TON API
       const response = await fetch(`https://tonapi.io/v2/jettons/${address.toString()}`);
       
       if (!response.ok) {
-        // Try alternative API endpoint
         const altResponse = await fetch(`https://toncenter.com/api/v3/jetton/masters?address=${address.toString()}&limit=1`);
         if (!altResponse.ok) {
           throw new Error('Token not found');
@@ -95,13 +95,18 @@ export default function AdminPage() {
           decimals: parseInt(master.jetton_content?.decimals || '9'),
         };
         setJettonInfo(info);
+        // Pre-fill metadata fields
+        setNewName(info.name);
+        setNewSymbol(info.symbol);
+        setNewDescription(info.description);
+        setNewImage(info.image);
+        setNewDecimals(info.decimals.toString());
         loadedAddressRef.current = contractAddress;
         if (showToast) toast.success('Token info loaded');
         return;
       }
       
       const data = await response.json();
-      
       const info: JettonInfo = {
         totalSupply: data.total_supply || '0',
         adminAddress: data.admin?.address || null,
@@ -114,6 +119,12 @@ export default function AdminPage() {
       };
       
       setJettonInfo(info);
+      // Pre-fill metadata fields
+      setNewName(info.name);
+      setNewSymbol(info.symbol);
+      setNewDescription(info.description);
+      setNewImage(info.image);
+      setNewDecimals(info.decimals.toString());
       loadedAddressRef.current = contractAddress;
       
       if (showToast) toast.success('Token info loaded');
@@ -121,7 +132,6 @@ export default function AdminPage() {
       console.error('Failed to load jetton:', error);
       if (showToast) toast.error(error.message || 'Failed to load token info');
       
-      // Set empty state for new tokens that aren't indexed yet
       if (!jettonInfo) {
         setJettonInfo({
           totalSupply: '0',
@@ -129,7 +139,7 @@ export default function AdminPage() {
           mintable: true,
           name: 'New Token',
           symbol: '???',
-          description: 'Token not yet indexed. Try refreshing in a few minutes.',
+          description: 'Token not yet indexed.',
           image: '',
           decimals: 9,
         });
@@ -141,7 +151,6 @@ export default function AdminPage() {
     }
   }, [contractAddress, wallet, jettonInfo]);
 
-  // Auto-load jetton info when address is set from URL (only once)
   useEffect(() => {
     if (contractAddress && router.query.address && !loadedAddressRef.current) {
       handleLoadJetton(false);
@@ -164,23 +173,22 @@ export default function AdminPage() {
       const decimals = jettonInfo?.decimals || 9;
       const amount = BigInt(mintAmount) * BigInt(10 ** decimals);
       
-      // Jetton 2.0 mint message (from JettonMinter.mintMessage)
       const internalTransferMsg = beginCell()
         .storeUint(Opcodes.internalTransfer, 32)
-        .storeUint(0, 64) // query_id
-        .storeCoins(amount) // jetton_amount
-        .storeAddress(null) // from_address
-        .storeAddress(wallet) // response_address
-        .storeCoins(toNano('0.01')) // forward_ton_amount
-        .storeMaybeRef(null) // custom_payload
+        .storeUint(0, 64)
+        .storeCoins(amount)
+        .storeAddress(null)
+        .storeAddress(wallet)
+        .storeCoins(toNano('0.01'))
+        .storeMaybeRef(null)
         .endCell();
 
       const mintBody = beginCell()
-        .storeUint(Opcodes.mint, 32) // op = 0x642b7d07
-        .storeUint(0, 64) // query_id
-        .storeAddress(toAddress) // to_address
-        .storeCoins(toNano('0.1')) // total_ton_amount
-        .storeRef(internalTransferMsg) // master_msg
+        .storeUint(Opcodes.mint, 32)
+        .storeUint(0, 64)
+        .storeAddress(toAddress)
+        .storeCoins(toNano('0.1'))
+        .storeRef(internalTransferMsg)
         .endCell();
 
       await sendTransaction({
@@ -197,6 +205,41 @@ export default function AdminPage() {
     }
   };
 
+  const handleChangeMetadata = async () => {
+    if (!connected || !wallet) {
+      toast.error('Please connect your wallet');
+      return;
+    }
+
+    try {
+      let metadataCell;
+      
+      if (useOffchainUrl && offchainUrl) {
+        metadataCell = buildOffchainMetadataCell(offchainUrl);
+      } else {
+        metadataCell = buildOnchainMetadataCell({
+          name: newName,
+          symbol: newSymbol,
+          description: newDescription || undefined,
+          image: newImage || undefined,
+          decimals: parseInt(newDecimals) || 9,
+        });
+      }
+      
+      const changeMetadataBody = buildChangeMetadataMessage(metadataCell);
+
+      await sendTransaction({
+        to: contractAddress,
+        value: toNano('0.1').toString(),
+        body: changeMetadataBody.toBoc().toString('base64'),
+      });
+
+      toast.success('Metadata change transaction sent!');
+    } catch (error: any) {
+      toast.error(error.message || 'Metadata change error');
+    }
+  };
+
   const handleChangeAdmin = async () => {
     if (!connected || !wallet) {
       toast.error('Please connect your wallet');
@@ -210,9 +253,6 @@ export default function AdminPage() {
 
     try {
       const adminAddress = Address.parse(newAdmin);
-      
-      // Jetton 2.0 change_admin (op = 0x6501f354)
-      // Sets next_admin, the new admin must call claim_admin to accept
       const changeAdminBody = beginCell()
         .storeUint(Opcodes.changeAdmin, 32)
         .storeUint(0, 64)
@@ -225,7 +265,7 @@ export default function AdminPage() {
         body: changeAdminBody.toBoc().toString('base64'),
       });
 
-      toast.success('Admin change request sent! New admin must confirm (claim_admin).');
+      toast.success('Admin change request sent!');
       setNewAdmin('');
     } catch (error: any) {
       toast.error(error.message || 'Admin change error');
@@ -239,7 +279,6 @@ export default function AdminPage() {
     }
 
     try {
-      // Jetton 2.0 drop_admin (op = 0x7431f221)
       const dropAdminBody = beginCell()
         .storeUint(Opcodes.dropAdmin, 32)
         .storeUint(0, 64)
@@ -251,7 +290,7 @@ export default function AdminPage() {
         body: dropAdminBody.toBoc().toString('base64'),
       });
 
-      toast.success('Admin rights revoked! Token is now fully decentralized.');
+      toast.success('Admin rights revoked!');
     } catch (error: any) {
       toast.error(error.message || 'Revoke error');
     }
@@ -286,8 +325,8 @@ export default function AdminPage() {
 
       <div className="min-h-screen flex flex-col">
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-cook-orange/5 rounded-full blur-3xl animate-blob" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-ton-blue/5 rounded-full blur-3xl animate-blob animation-delay-2000" />
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-orange-400/15 to-yellow-400/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-br from-orange-300/10 to-amber-400/10 rounded-full blur-3xl" />
         </div>
 
         <Header />
@@ -295,7 +334,7 @@ export default function AdminPage() {
         <main className="flex-grow relative z-10 pt-24 pb-12 px-4">
           <div className="max-w-4xl mx-auto">
             <h1 className="text-3xl md:text-4xl font-bold text-cook-text mb-2 text-center">
-              Manage <span className="gradient-text">Token</span>
+              Manage <span className="gradient-text-cook">Token</span>
             </h1>
             <p className="text-cook-text-secondary text-center mb-8">
               Jetton 2.0 Admin Panel
@@ -320,16 +359,9 @@ export default function AdminPage() {
                 <button
                   onClick={() => handleLoadJetton(true)}
                   disabled={loading || !contractAddress}
-                  className="btn-primary whitespace-nowrap"
+                  className="btn-cook whitespace-nowrap"
                 >
-                  {loading ? (
-                    <span className="flex items-center gap-2">
-                      <div className="spinner" />
-                      Loading...
-                    </span>
-                  ) : (
-                    'Load'
-                  )}
+                  {loading ? 'Loading...' : 'Load'}
                 </button>
               </div>
             </div>
@@ -363,36 +395,15 @@ export default function AdminPage() {
                           You are Admin
                         </span>
                       )}
-                      {!jettonInfo.adminAddress && (
-                        <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm font-medium">
-                          Decentralized
-                        </span>
-                      )}
                       <button
                         onClick={handleRefresh}
-                        className="text-sm text-ton-blue hover:underline flex items-center gap-1"
+                        className="text-sm text-cook-orange hover:underline flex items-center gap-1"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
                         Refresh
                       </button>
-                    </div>
-                  </div>
-
-                  {/* Important notice about Jetton 2.0 */}
-                  <div className="mt-4 p-4 bg-ton-blue/10 border border-ton-blue/20 rounded-xl">
-                    <div className="flex items-start gap-3">
-                      <svg className="w-5 h-5 text-ton-blue flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <div>
-                        <h4 className="font-medium text-ton-blue mb-1">Jetton 2.0 (TEP-74 Compatible)</h4>
-                        <p className="text-sm text-cook-text-secondary">
-                          This token uses the official Jetton 2.0 contract from TON Core.
-                          Fully compatible with DEX (DeDust, STON.fi) and all explorers.
-                        </p>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -402,6 +413,7 @@ export default function AdminPage() {
                   {[
                     { id: 'info', label: 'Info' },
                     { id: 'mint', label: 'Mint' },
+                    { id: 'metadata', label: 'Metadata' },
                     { id: 'admin', label: 'Admin' },
                   ].map((tab) => (
                     <button
@@ -409,7 +421,7 @@ export default function AdminPage() {
                       onClick={() => setActiveTab(tab.id as any)}
                       className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all whitespace-nowrap ${
                         activeTab === tab.id
-                          ? 'bg-gradient-ton text-white shadow-ton'
+                          ? 'bg-gradient-cook text-white shadow-cook'
                           : 'text-cook-text-secondary hover:text-cook-text'
                       }`}
                     >
@@ -430,12 +442,6 @@ export default function AdminPage() {
                         <span className="text-cook-text font-medium">{jettonInfo.symbol || '—'}</span>
                       </div>
                       <div className="flex justify-between items-center py-3 border-b border-cook-border">
-                        <span className="text-cook-text-secondary">Description</span>
-                        <span className="text-cook-text font-medium text-right max-w-[250px]">
-                          {jettonInfo.description || '—'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center py-3 border-b border-cook-border">
                         <span className="text-cook-text-secondary">Total Supply</span>
                         <span className="text-cook-text font-medium">
                           {formatSupply(jettonInfo.totalSupply, jettonInfo.decimals)} {jettonInfo.symbol}
@@ -445,20 +451,14 @@ export default function AdminPage() {
                         <span className="text-cook-text-secondary">Decimals</span>
                         <span className="text-cook-text font-medium">{jettonInfo.decimals}</span>
                       </div>
-                      <div className="flex justify-between items-center py-3 border-b border-cook-border">
-                        <span className="text-cook-text-secondary">Mintable</span>
-                        <span className={`font-medium ${jettonInfo.adminAddress ? 'text-green-600' : 'text-red-500'}`}>
-                          {jettonInfo.adminAddress ? 'Yes' : 'No (decentralized)'}
-                        </span>
-                      </div>
                       <div className="flex justify-between items-center py-3">
                         <span className="text-cook-text-secondary">Admin</span>
                         {jettonInfo.adminAddress ? (
-                          <code className="text-ton-blue text-sm">
+                          <code className="text-cook-orange text-sm">
                             {jettonInfo.adminAddress.slice(0, 8)}...{jettonInfo.adminAddress.slice(-6)}
                           </code>
                         ) : (
-                          <span className="text-cook-text-secondary">None (decentralized)</span>
+                          <span className="text-cook-text-secondary">Decentralized</span>
                         )}
                       </div>
                     </div>
@@ -468,24 +468,12 @@ export default function AdminPage() {
                     <div className="space-y-6">
                       {!isAdmin && jettonInfo.adminAddress && (
                         <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
-                          <p className="text-red-600 text-sm">
-                            You are not the admin of this token and cannot mint.
-                          </p>
-                        </div>
-                      )}
-
-                      {!jettonInfo.adminAddress && (
-                        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-                          <p className="text-yellow-700 text-sm">
-                            This token is decentralized. Admin rights have been revoked, minting is not possible.
-                          </p>
+                          <p className="text-red-600 text-sm">You are not the admin of this token.</p>
                         </div>
                       )}
 
                       <div>
-                        <label className="block text-sm font-medium text-cook-text mb-2">
-                          Amount to Mint
-                        </label>
+                        <label className="block text-sm font-medium text-cook-text mb-2">Amount to Mint</label>
                         <input
                           type="text"
                           value={mintAmount}
@@ -494,14 +482,9 @@ export default function AdminPage() {
                           className="input-ton"
                           disabled={!isAdmin}
                         />
-                        <p className="text-xs text-cook-text-secondary mt-1">
-                          Without decimals (for 9 decimals: 1000000 = 1,000,000 tokens)
-                        </p>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-cook-text mb-2">
-                          Recipient Address
-                        </label>
+                        <label className="block text-sm font-medium text-cook-text mb-2">Recipient Address</label>
                         <input
                           type="text"
                           value={mintTo}
@@ -511,21 +494,90 @@ export default function AdminPage() {
                           disabled={!isAdmin}
                         />
                         {wallet && isAdmin && (
-                          <button
-                            onClick={() => setMintTo(wallet.toString())}
-                            className="text-sm text-ton-blue hover:underline mt-1"
-                          >
+                          <button onClick={() => setMintTo(wallet.toString())} className="text-sm text-cook-orange hover:underline mt-1">
                             Use my address
                           </button>
                         )}
                       </div>
-                      <button
-                        onClick={handleMint}
-                        disabled={!connected || !mintAmount || !mintTo || !isAdmin}
-                        className="btn-primary w-full"
-                      >
+                      <button onClick={handleMint} disabled={!connected || !mintAmount || !mintTo || !isAdmin} className="btn-cook w-full">
                         Mint Tokens
                       </button>
+                    </div>
+                  )}
+
+                  {activeTab === 'metadata' && (
+                    <div className="space-y-6">
+                      {!isAdmin && jettonInfo.adminAddress && (
+                        <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                          <p className="text-red-600 text-sm">You are not the admin of this token.</p>
+                        </div>
+                      )}
+
+                      {!jettonInfo.adminAddress && (
+                        <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
+                          <p className="text-cook-text-secondary text-sm">This token is decentralized. Metadata cannot be changed.</p>
+                        </div>
+                      )}
+
+                      {isAdmin && (
+                        <>
+                          <div className="p-4 bg-cook-bg-secondary rounded-xl border border-cook-border">
+                            <label className="flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={useOffchainUrl}
+                                onChange={(e) => setUseOffchainUrl(e.target.checked)}
+                                className="mr-2 accent-cook-orange"
+                              />
+                              <span className="text-sm text-cook-text">Use off-chain metadata URL</span>
+                            </label>
+                          </div>
+
+                          {useOffchainUrl ? (
+                            <div>
+                              <label className="block text-sm font-medium text-cook-text mb-2">Metadata URL</label>
+                              <input
+                                type="url"
+                                value={offchainUrl}
+                                onChange={(e) => setOffchainUrl(e.target.value)}
+                                placeholder="https://example.com/metadata.json"
+                                className="input-ton"
+                              />
+                            </div>
+                          ) : (
+                            <>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-sm font-medium text-cook-text mb-2">Name</label>
+                                  <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} className="input-ton" />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-cook-text mb-2">Symbol</label>
+                                  <input type="text" value={newSymbol} onChange={(e) => setNewSymbol(e.target.value)} className="input-ton" />
+                                </div>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-cook-text mb-2">Description</label>
+                                <textarea value={newDescription} onChange={(e) => setNewDescription(e.target.value)} className="input-ton min-h-[80px]" />
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-sm font-medium text-cook-text mb-2">Image URL</label>
+                                  <input type="url" value={newImage} onChange={(e) => setNewImage(e.target.value)} className="input-ton" />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-cook-text mb-2">Decimals</label>
+                                  <input type="number" value={newDecimals} onChange={(e) => setNewDecimals(e.target.value)} min={0} max={18} className="input-ton" />
+                                </div>
+                              </div>
+                            </>
+                          )}
+
+                          <button onClick={handleChangeMetadata} disabled={!connected} className="btn-cook w-full">
+                            Update Metadata
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
 
@@ -533,81 +585,32 @@ export default function AdminPage() {
                     <div className="space-y-6">
                       {!isAdmin && jettonInfo.adminAddress && (
                         <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
-                          <p className="text-red-600 text-sm">
-                            You are not the admin of this token.
-                          </p>
-                        </div>
-                      )}
-
-                      {!jettonInfo.adminAddress && (
-                        <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
-                          <div className="flex items-center gap-3">
-                            <svg className="w-8 h-8 text-cook-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                            </svg>
-                            <div>
-                              <h4 className="font-medium text-cook-text">Token is Decentralized</h4>
-                              <p className="text-cook-text-secondary text-sm">
-                                This token has no admin. It is fully decentralized and cannot be controlled by anyone.
-                              </p>
-                            </div>
-                          </div>
+                          <p className="text-red-600 text-sm">You are not the admin of this token.</p>
                         </div>
                       )}
 
                       {isAdmin && (
                         <>
-                          {/* Change Admin */}
                           <div className="p-6 bg-cook-bg-secondary rounded-xl border border-cook-border">
                             <h4 className="font-semibold text-cook-text mb-2">Transfer Admin Rights</h4>
-                            <p className="text-sm text-cook-text-secondary mb-4">
-                              Transfer admin rights to another address. The new admin must confirm to accept.
-                            </p>
-                            <div>
-                              <label className="block text-sm font-medium text-cook-text mb-2">
-                                New Admin Address
-                              </label>
-                              <input
-                                type="text"
-                                value={newAdmin}
-                                onChange={(e) => setNewAdmin(e.target.value)}
-                                placeholder="EQ..."
-                                className="input-ton"
-                              />
-                            </div>
-                            <button
-                              onClick={handleChangeAdmin}
-                              disabled={!connected || !newAdmin}
-                              className="btn-primary w-full mt-4"
-                            >
+                            <input
+                              type="text"
+                              value={newAdmin}
+                              onChange={(e) => setNewAdmin(e.target.value)}
+                              placeholder="EQ..."
+                              className="input-ton mb-4"
+                            />
+                            <button onClick={handleChangeAdmin} disabled={!connected || !newAdmin} className="btn-cook w-full">
                               Transfer Rights
                             </button>
                           </div>
 
-                          {/* Revoke Admin (Danger Zone) */}
                           <div className="p-6 bg-red-50 border border-red-200 rounded-xl">
-                            <div className="flex items-start gap-3 mb-4">
-                              <svg className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                              </svg>
-                              <div>
-                                <h4 className="font-semibold text-red-600">Danger Zone</h4>
-                                <p className="text-sm text-cook-text-secondary mt-1">
-                                  Revoking admin rights will make the token fully decentralized. 
-                                  After this:
-                                </p>
-                                <ul className="text-sm text-cook-text-secondary mt-2 space-y-1 list-disc list-inside">
-                                  <li>No one can mint new tokens</li>
-                                  <li>Metadata will remain unchanged forever</li>
-                                  <li>This action is <strong className="text-red-600">IRREVERSIBLE</strong></li>
-                                </ul>
-                              </div>
-                            </div>
-                            <button
-                              onClick={handleRevokeAdmin}
-                              disabled={!connected}
-                              className="w-full py-3 px-6 bg-red-100 hover:bg-red-200 text-red-600 font-semibold rounded-xl transition-colors border border-red-300"
-                            >
+                            <h4 className="font-semibold text-red-600 mb-2">Danger Zone</h4>
+                            <p className="text-sm text-cook-text-secondary mb-4">
+                              Revoking admin rights is <strong>IRREVERSIBLE</strong>. The token will become fully decentralized.
+                            </p>
+                            <button onClick={handleRevokeAdmin} disabled={!connected} className="w-full py-3 px-6 bg-red-100 hover:bg-red-200 text-red-600 font-semibold rounded-xl transition-colors border border-red-300">
                               🔒 Revoke Admin Rights
                             </button>
                           </div>

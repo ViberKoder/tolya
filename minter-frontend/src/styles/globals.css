@@ -10,6 +10,7 @@
   --ton-blue-light: #1DA1F2;
   --cook-orange: #F97316;
   --cook-orange-light: #FB923C;
+  --cook-yellow: #FBBF24;
 }
 
 * {
@@ -28,7 +29,7 @@ body {
 }
 
 body {
-  background: linear-gradient(180deg, #FFFFFF 0%, #F8F9FA 100%);
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFFBF5 100%);
   min-height: 100vh;
 }
 
@@ -48,12 +49,12 @@ a {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #0088CC;
+  background: #F97316;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #F97316;
+  background: #EA580C;
 }
 
 /* TON Connect modal styles override */
@@ -70,9 +71,17 @@ a {
   background-clip: text;
 }
 
-/* Gradient text - Cook orange */
+/* Gradient text - Cook yellow to orange */
 .gradient-text-cook {
-  background: linear-gradient(135deg, #F97316 0%, #FB923C 100%);
+  background: linear-gradient(135deg, #FBBF24 0%, #F97316 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Gradient text - Ice blue */
+.gradient-text-ice {
+  background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -98,14 +107,35 @@ a {
   box-shadow: 0 4px 40px rgba(249, 115, 22, 0.1);
 }
 
+/* Card styles - Ice theme */
+.card-ice {
+  @apply bg-white rounded-2xl border border-blue-200 p-6 transition-all duration-300;
+  box-shadow: 0 2px 20px rgba(59, 130, 246, 0.08);
+}
+
+.card-ice:hover {
+  @apply border-blue-400/50;
+  box-shadow: 0 4px 40px rgba(59, 130, 246, 0.15);
+}
+
 /* Input styles - Light theme */
 .input-ton {
   @apply w-full bg-cook-bg-secondary border border-cook-border rounded-xl px-4 py-3 text-cook-text 
-         placeholder-cook-text-secondary focus:outline-none focus:border-ton-blue transition-all duration-200;
+         placeholder-cook-text-secondary focus:outline-none focus:border-cook-orange transition-all duration-200;
 }
 
 .input-ton:focus {
-  box-shadow: 0 0 0 3px rgba(0, 136, 204, 0.15);
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+}
+
+/* Input styles - Ice theme */
+.input-ice {
+  @apply w-full bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-gray-800 
+         placeholder-gray-400 focus:outline-none focus:border-blue-500 transition-all duration-200;
+}
+
+.input-ice:focus {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 /* Button styles */
@@ -119,17 +149,33 @@ a {
 }
 
 .btn-cook {
-  @apply px-6 py-3 bg-gradient-cook rounded-xl font-semibold text-white 
+  @apply px-6 py-3 rounded-xl font-semibold text-white 
          transition-all duration-300 hover:opacity-90 hover:shadow-cook;
+  background: linear-gradient(135deg, #FBBF24 0%, #F97316 100%);
 }
 
 .btn-cook:disabled {
   @apply opacity-50 cursor-not-allowed;
 }
 
+.btn-ice {
+  @apply px-6 py-3 rounded-xl font-semibold text-white 
+         transition-all duration-300 hover:opacity-90;
+  background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%);
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+}
+
+.btn-ice:hover {
+  box-shadow: 0 6px 30px rgba(59, 130, 246, 0.4);
+}
+
+.btn-ice:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
 .btn-secondary {
   @apply px-6 py-3 bg-cook-bg-secondary border border-cook-border rounded-xl font-semibold text-cook-text 
-         transition-all duration-300 hover:border-ton-blue/50;
+         transition-all duration-300 hover:border-cook-orange/50;
 }
 
 /* Animation for background shapes */
@@ -163,7 +209,16 @@ a {
 /* Loading spinner */
 .spinner {
   border: 3px solid #E5E7EB;
-  border-top: 3px solid #0088CC;
+  border-top: 3px solid #F97316;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+}
+
+.spinner-ice {
+  border: 3px solid #DBEAFE;
+  border-top: 3px solid #3B82F6;
   border-radius: 50%;
   width: 24px;
   height: 24px;
@@ -177,7 +232,7 @@ a {
 
 /* Step indicator */
 .step-active {
-  @apply bg-ton-blue text-white;
+  @apply bg-cook-orange text-white;
 }
 
 .step-completed {

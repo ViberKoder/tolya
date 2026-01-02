@@ -1,6 +1,7 @@
 import { Address, beginCell, Cell, toNano, storeStateInit, contractAddress } from '@ton/core';
 import { TokenData } from '@/pages';
 import { SendTransactionParams, TransactionMessage } from '@/hooks/useTonConnect';
+import { buildOnchainMetadataCell, buildOffchainMetadataCell } from './onchain-metadata';
 import toast from 'react-hot-toast';
 
 // Monetization wallet address
@@ -13,15 +14,9 @@ export const TOTAL_DEPLOY_COST = toNano('1'); // Total cost: 0.2 + 0.8 = 1 TON
 // OFFICIAL JETTON 2.0 CONTRACTS from ton-blockchain/jetton-contract (jetton-2.0 branch)
 // Source: https://github.com/ton-blockchain/jetton-contract/tree/jetton-2.0
 // 
-// Data structure (from load_data):
-//   total_supply: Coins
-//   admin_address: MsgAddress
-//   next_admin_address: MsgAddress (transfer_admin)
-//   jetton_wallet_code: ^Cell
-//   metadata_uri: ^Cell (snake string without prefix - URL to JSON metadata)
-//
-// IMPORTANT: metadata_uri must be a real URL (https:// or ipfs://) pointing to a JSON file.
-// The contract's build_content_cell() wraps this into a TEP-64 on-chain dictionary.
+// IMPORTANT: For Jetton 2.0, we need to handle metadata differently.
+// The contract stores metadata_uri as a Cell reference.
+// We'll use TEP-64 on-chain metadata format for full explorer compatibility.
 // ============================================================================
 
 // Official Jetton 2.0 Minter code (from build/JettonMinter.compiled.json)
@@ -65,109 +60,6 @@ interface DeployResult {
   error?: string;
 }
 
-/**
- * Build metadata URI cell for Jetton 2.0
- * 
- * The contract expects metadata_uri as a snake-encoded string stored in a ref.
- * This matches jettonContentToCell() from the official wrapper:
- *   return beginCell().storeStringRefTail(content.uri).endCell();
- * 
- * IMPORTANT: The URL must be a real, publicly accessible URL (https:// or ipfs://)
- * that returns a JSON file with: name, symbol, description, image, decimals
- */
-function buildMetadataUriCell(metadataUrl: string): Cell {
-  return beginCell()
-    .storeStringRefTail(metadataUrl)
-    .endCell();
-}
-
-/**
- * Upload metadata to a free JSON hosting service
- * Returns a publicly accessible URL to the JSON metadata
- */
-async function uploadMetadata(metadata: {
-  name: string;
-  symbol: string;
-  description: string;
-  image: string;
-  decimals: number;
-}): Promise<string> {
-  const jsonMetadata = {
-    name: metadata.name,
-    symbol: metadata.symbol,
-    description: metadata.description || metadata.name,
-    image: metadata.image || '',
-    decimals: metadata.decimals.toString(),
-  };
-
-  // Try multiple services for reliability
-
-  // Option 1: try paste.rs (simple, public, no auth)
-  try {
-    const response = await fetch('https://paste.rs/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(jsonMetadata),
-    });
-
-    if (response.ok) {
-      const pasteUrl = await response.text();
-      console.log('Uploaded to paste.rs:', pasteUrl.trim());
-      return pasteUrl.trim();
-    }
-  } catch (e) {
-    console.warn('paste.rs upload failed:', e);
-  }
-
-  // Option 2: try jsonblob.com
-  try {
-    const response = await fetch('https://jsonblob.com/api/jsonBlob', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify(jsonMetadata),
-    });
-
-    if (response.ok) {
-      const location = response.headers.get('Location') || response.headers.get('X-jsonblob');
-      if (location) {
-        console.log('Uploaded to jsonblob:', location);
-        return location;
-      }
-    }
-  } catch (e) {
-    console.warn('jsonblob upload failed:', e);
-  }
-
-  // Option 3: try rentry.co (paste service that supports JSON)
-  try {
-    const formData = new FormData();
-    formData.append('text', JSON.stringify(jsonMetadata, null, 2));
-    
-    const response = await fetch('https://rentry.co/api/new', {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      if (data.url) {
-        const rawUrl = data.url.replace('rentry.co/', 'rentry.co/raw/');
-        console.log('Uploaded to rentry:', rawUrl);
-        return rawUrl;
-      }
-    }
-  } catch (e) {
-    console.warn('rentry upload failed:', e);
-  }
-
-  throw new Error('Failed to upload metadata. Please provide your own metadata URL.');
-}
-
 export async function deployJettonMinter(
   tokenData: TokenData,
   walletAddress: Address,
@@ -177,45 +69,25 @@ export async function deployJettonMinter(
   try {
     toast.loading('Preparing Jetton 2.0 contract...', { id: 'deploy' });
 
-    let metadataUrl = tokenData.metadataUrl;
+    let metadataCell: Cell;
 
-    // If no metadata URL provided, upload to a free hosting service
-    if (!metadataUrl) {
-      toast.loading('Uploading metadata...', { id: 'deploy' });
-      
-      try {
-        metadataUrl = await uploadMetadata({
-          name: tokenData.name,
-          symbol: tokenData.symbol.toUpperCase(),
-          description: tokenData.description || tokenData.name,
-          image: tokenData.image || '',
-          decimals: tokenData.decimals,
-        });
-        
-        console.log('Metadata uploaded successfully:', metadataUrl);
-      } catch (e: any) {
-        console.error('Metadata upload failed:', e);
-        toast.error(
-          'Failed to upload metadata. Please provide your own metadata URL in the Advanced tab.',
-          { id: 'deploy', duration: 8000 }
-        );
-        return { 
-          success: false, 
-          error: 'Failed to upload metadata. Please provide your own metadata URL (IPFS, GitHub, or any web server) in the Advanced tab.' 
-        };
-      }
+    // Check if user provided an off-chain metadata URL
+    if (tokenData.metadataUrl && tokenData.metadataUrl.trim()) {
+      // Use off-chain metadata
+      console.log('Using off-chain metadata URL:', tokenData.metadataUrl);
+      metadataCell = buildOffchainMetadataCell(tokenData.metadataUrl.trim());
+    } else {
+      // Use on-chain metadata (TEP-64)
+      console.log('Building on-chain metadata...');
+      metadataCell = buildOnchainMetadataCell({
+        name: tokenData.name,
+        symbol: tokenData.symbol.toUpperCase(),
+        description: tokenData.description || tokenData.name,
+        image: tokenData.image || undefined,
+        image_data: tokenData.imageData || undefined, // Base64 image data
+        decimals: tokenData.decimals,
+      });
     }
-
-    // Validate URL format
-    if (!metadataUrl.startsWith('http://') && !metadataUrl.startsWith('https://') && !metadataUrl.startsWith('ipfs://')) {
-      toast.error('Invalid metadata URL. Must start with https:// or ipfs://', { id: 'deploy' });
-      return { success: false, error: 'Invalid metadata URL format' };
-    }
-
-    console.log('Using metadata URL:', metadataUrl);
-
-    // Build metadata URI cell
-    const metadataUriCell = buildMetadataUriCell(metadataUrl);
 
     // Calculate total supply with decimals
     const supplyWithDecimals = BigInt(tokenData.totalSupply) * BigInt(10 ** tokenData.decimals);
@@ -226,13 +98,13 @@ export async function deployJettonMinter(
     //   admin_address: MsgAddress
     //   next_admin_address: MsgAddress (null for no pending transfer)
     //   jetton_wallet_code: ^Cell
-    //   metadata_uri: ^Cell
+    //   metadata_uri: ^Cell (but we use it for TEP-64 on-chain metadata)
     const minterData = beginCell()
       .storeCoins(0) // total_supply starts at 0
       .storeAddress(walletAddress) // admin_address
       .storeAddress(null) // next_admin_address (transfer_admin)
       .storeRef(JETTON_WALLET_CODE) // jetton_wallet_code
-      .storeRef(metadataUriCell) // metadata_uri
+      .storeRef(metadataCell) // metadata (on-chain or off-chain)
       .endCell();
 
     // Create StateInit
@@ -248,7 +120,6 @@ export async function deployJettonMinter(
     console.log('Admin:', walletAddress.toString());
     console.log('Token name:', tokenData.name);
     console.log('Token symbol:', tokenData.symbol);
-    console.log('Metadata URL:', metadataUrl);
 
     // Build StateInit cell
     const stateInitCell = beginCell()
@@ -256,7 +127,6 @@ export async function deployJettonMinter(
       .endCell();
 
     // Build mint message for Jetton 2.0
-    // From JettonMinter.mintMessage():
     const internalTransferMsg = beginCell()
       .storeUint(Op.internal_transfer, 32)
       .storeUint(0, 64) // query_id
@@ -321,8 +191,6 @@ export function getJettonWalletAddress(
   ownerAddress: Address,
   minterAddress: Address
 ): Address {
-  // Jetton 2.0 wallet data structure (from jetton-utils.fc pack_jetton_wallet_data):
-  // status:uint4 balance:Coins owner:MsgAddress jetton_master:MsgAddress
   const walletData = beginCell()
     .storeUint(0, 4) // status
     .storeCoins(0) // balance

@@ -11,11 +11,12 @@ export interface TokenData {
   name: string;
   symbol: string;
   description: string;
-  image: string;
+  image: string; // URL to image
+  imageData?: string; // Base64 encoded image data for on-chain storage
   decimals: number;
   totalSupply: string;
   mintable: boolean;
-  metadataUrl?: string; // URL to hosted JSON metadata
+  metadataUrl?: string; // Optional: URL to off-chain JSON metadata
 }
 
 export type DeploymentStep = 'idle' | 'preparing' | 'deploying' | 'minting' | 'completed' | 'error';
@@ -36,7 +37,6 @@ export default function Home() {
       setStep('preparing');
       setError('');
       
-      // Import deployment logic
       const { deployJettonMinter } = await import('@/utils/deploy');
       
       setStep('deploying');
@@ -78,9 +78,9 @@ export default function Home() {
       <div className="min-h-screen flex flex-col">
         {/* Background decorations */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-cook-orange/5 rounded-full blur-3xl animate-blob" />
-          <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-ton-blue/5 rounded-full blur-3xl animate-blob animation-delay-2000" />
-          <div className="absolute bottom-1/4 left-1/3 w-96 h-96 bg-cook-orange/5 rounded-full blur-3xl animate-blob animation-delay-4000" />
+          <div className="absolute top-20 left-1/4 w-[500px] h-[500px] bg-gradient-to-br from-orange-400/20 to-yellow-400/10 rounded-full blur-3xl" />
+          <div className="absolute top-1/3 right-1/4 w-[400px] h-[400px] bg-gradient-to-br from-orange-300/15 to-amber-400/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 left-1/3 w-[450px] h-[450px] bg-gradient-to-br from-yellow-400/10 to-orange-300/15 rounded-full blur-3xl" />
         </div>
 
         <Header />
@@ -89,14 +89,17 @@ export default function Home() {
           {/* Hero Section */}
           <section className="pt-24 pb-12 px-4">
             <div className="max-w-4xl mx-auto text-center">
-              <div className="inline-flex items-center px-4 py-2 bg-cook-bg-secondary rounded-full border border-cook-border mb-6">
-                <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse" />
-                <span className="text-sm text-cook-text-secondary">Jetton 2.0 Standard</span>
+              {/* Large Logo */}
+              <div className="mb-6">
+                <img 
+                  src="https://em-content.zobj.net/source/telegram/386/poultry-leg_1f357.webp" 
+                  alt="Cook" 
+                  className="w-24 h-24 mx-auto drop-shadow-lg"
+                />
               </div>
               
               <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight text-cook-text">
-                Cook your{' '}
-                <span className="gradient-text">Jetton 2.0</span>
+                <span className="gradient-text-cook">Cook</span> your Jetton 2.0
                 <br />on TON
               </h1>
               

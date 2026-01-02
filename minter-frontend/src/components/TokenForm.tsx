@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { TokenData } from '@/pages';
 
 interface TokenFormProps {
@@ -13,6 +13,7 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
     symbol: '',
     description: '',
     image: '',
+    imageData: '',
     decimals: 9,
     totalSupply: '1000000',
     mintable: true,
@@ -21,7 +22,8 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
 
   const [imagePreview, setImagePreview] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'basic' | 'advanced'>('basic');
-  const [metadataMode, setMetadataMode] = useState<'auto' | 'manual'>('auto');
+  const [imageSource, setImageSource] = useState<'upload' | 'url'>('upload');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -46,38 +48,49 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
 
     if (name === 'image' && value) {
       setImagePreview(value);
+      setFormData(prev => ({ ...prev, imageData: '' })); // Clear uploaded image
     }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file size (max 50KB for on-chain storage)
+    if (file.size > 50 * 1024) {
+      alert('Image too large. Maximum size is 50KB for on-chain storage. Use URL for larger images.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      // Extract just the base64 data (remove data:image/...;base64, prefix for storage)
+      const base64Data = base64.split(',')[1];
+      
+      setFormData(prev => ({
+        ...prev,
+        imageData: base64Data,
+        image: '', // Clear URL when uploading
+      }));
+      setImagePreview(base64);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // If manual mode, require metadata URL
-    if (metadataMode === 'manual' && !formData.metadataUrl) {
-      alert('Please provide a metadata URL');
-      return;
-    }
-    
     onDeploy(formData);
   };
 
   const isValid = formData.name.trim() && formData.symbol.trim() && formData.totalSupply;
 
-  // Generate metadata JSON for user to host
-  const generateMetadataJson = () => {
-    const metadata = {
-      name: formData.name,
-      symbol: formData.symbol.toUpperCase(),
-      description: formData.description || formData.name,
-      image: formData.image || '',
-      decimals: formData.decimals.toString(),
-    };
-    return JSON.stringify(metadata, null, 2);
-  };
-
-  const copyMetadataJson = () => {
-    navigator.clipboard.writeText(generateMetadataJson());
-    alert('Metadata JSON copied to clipboard!');
+  const clearImage = () => {
+    setFormData(prev => ({ ...prev, image: '', imageData: '' }));
+    setImagePreview('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   return (
@@ -89,7 +102,7 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
           onClick={() => setActiveTab('basic')}
           className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
             activeTab === 'basic'
-              ? 'bg-gradient-ton text-white shadow-ton'
+              ? 'bg-gradient-cook text-white shadow-cook'
               : 'text-cook-text-secondary hover:text-cook-text'
           }`}
         >
@@ -100,7 +113,7 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
           onClick={() => setActiveTab('advanced')}
           className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
             activeTab === 'advanced'
-              ? 'bg-gradient-ton text-white shadow-ton'
+              ? 'bg-gradient-cook text-white shadow-cook'
               : 'text-cook-text-secondary hover:text-cook-text'
           }`}
         >
@@ -114,7 +127,7 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-cook-text mb-2">
-                Token Name <span className="text-ton-blue">*</span>
+                Token Name <span className="text-cook-orange">*</span>
               </label>
               <input
                 type="text"
@@ -129,7 +142,7 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
             </div>
             <div>
               <label className="block text-sm font-medium text-cook-text mb-2">
-                Symbol <span className="text-ton-blue">*</span>
+                Symbol <span className="text-cook-orange">*</span>
               </label>
               <input
                 type="text"
@@ -160,31 +173,92 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
             />
           </div>
 
-          {/* Image URL with Preview */}
+          {/* Image Upload/URL */}
           <div>
             <label className="block text-sm font-medium text-cook-text mb-2">
-              Token Image URL
+              Token Image
             </label>
+            
+            {/* Image Source Toggle */}
+            <div className="flex gap-4 mb-4">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="imageSource"
+                  checked={imageSource === 'upload'}
+                  onChange={() => setImageSource('upload')}
+                  className="mr-2 accent-cook-orange"
+                />
+                <span className="text-sm text-cook-text">Upload Image</span>
+              </label>
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="imageSource"
+                  checked={imageSource === 'url'}
+                  onChange={() => setImageSource('url')}
+                  className="mr-2 accent-cook-orange"
+                />
+                <span className="text-sm text-cook-text">Image URL</span>
+              </label>
+            </div>
+
             <div className="flex gap-4">
               <div className="flex-grow">
-                <input
-                  type="url"
-                  name="image"
-                  value={formData.image}
-                  onChange={handleChange}
-                  placeholder="https://example.com/token-logo.png"
-                  className="input-ton"
-                />
-                <p className="text-xs text-cook-text-secondary mt-1">PNG or JPEG, 256x256px recommended. Must be publicly accessible URL.</p>
+                {imageSource === 'upload' ? (
+                  <div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/gif,image/webp"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      id="image-upload"
+                    />
+                    <label
+                      htmlFor="image-upload"
+                      className="flex items-center justify-center w-full h-12 px-4 border-2 border-dashed border-cook-border rounded-xl cursor-pointer hover:border-cook-orange transition-colors bg-cook-bg-secondary"
+                    >
+                      <svg className="w-5 h-5 mr-2 text-cook-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span className="text-cook-text-secondary">Click to upload (max 50KB)</span>
+                    </label>
+                    <p className="text-xs text-cook-text-secondary mt-1">PNG, JPEG, GIF, WEBP. Small images work best.</p>
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      type="url"
+                      name="image"
+                      value={formData.image}
+                      onChange={handleChange}
+                      placeholder="https://example.com/token-logo.png"
+                      className="input-ton"
+                    />
+                    <p className="text-xs text-cook-text-secondary mt-1">Direct link to image file</p>
+                  </div>
+                )}
               </div>
-              <div className="w-20 h-20 rounded-xl bg-cook-bg-secondary border border-cook-border overflow-hidden flex items-center justify-center flex-shrink-0">
+              
+              {/* Image Preview */}
+              <div className="w-20 h-20 rounded-xl bg-cook-bg-secondary border border-cook-border overflow-hidden flex items-center justify-center flex-shrink-0 relative">
                 {imagePreview ? (
-                  <img 
-                    src={imagePreview} 
-                    alt="Token preview" 
-                    className="w-full h-full object-cover"
-                    onError={() => setImagePreview('')}
-                  />
+                  <>
+                    <img 
+                      src={imagePreview} 
+                      alt="Token preview" 
+                      className="w-full h-full object-cover"
+                      onError={() => setImagePreview('')}
+                    />
+                    <button
+                      type="button"
+                      onClick={clearImage}
+                      className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600"
+                    >
+                      ×
+                    </button>
+                  </>
                 ) : (
                   <svg className="w-8 h-8 text-cook-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -197,7 +271,7 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
           {/* Total Supply */}
           <div>
             <label className="block text-sm font-medium text-cook-text mb-2">
-              Total Supply <span className="text-ton-blue">*</span>
+              Total Supply <span className="text-cook-orange">*</span>
             </label>
             <input
               type="text"
@@ -234,68 +308,22 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
             </p>
           </div>
 
-          {/* Metadata Mode Selection */}
+          {/* Off-chain Metadata URL (optional) */}
           <div className="p-4 bg-cook-bg-secondary rounded-xl border border-cook-border">
-            <h4 className="font-medium text-cook-text mb-3">Metadata Hosting</h4>
-            <div className="flex gap-4">
-              <label className="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  name="metadataMode"
-                  checked={metadataMode === 'auto'}
-                  onChange={() => setMetadataMode('auto')}
-                  className="mr-2"
-                />
-                <span className="text-sm text-cook-text">Use IPFS (recommended)</span>
-              </label>
-              <label className="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  name="metadataMode"
-                  checked={metadataMode === 'manual'}
-                  onChange={() => setMetadataMode('manual')}
-                  className="mr-2"
-                />
-                <span className="text-sm text-cook-text">Provide my own URL</span>
-              </label>
-            </div>
+            <h4 className="font-medium text-cook-text mb-2">Off-chain Metadata (Optional)</h4>
+            <p className="text-sm text-cook-text-secondary mb-3">
+              By default, metadata is stored on-chain. If you prefer off-chain storage, 
+              provide a URL to your JSON metadata file.
+            </p>
+            <input
+              type="url"
+              name="metadataUrl"
+              value={formData.metadataUrl}
+              onChange={handleChange}
+              placeholder="https://example.com/metadata.json"
+              className="input-ton"
+            />
           </div>
-
-          {metadataMode === 'manual' && (
-            <div>
-              <label className="block text-sm font-medium text-cook-text mb-2">
-                Metadata URL <span className="text-ton-blue">*</span>
-              </label>
-              <input
-                type="url"
-                name="metadataUrl"
-                value={formData.metadataUrl}
-                onChange={handleChange}
-                placeholder="https://example.com/metadata.json"
-                className="input-ton"
-              />
-              <p className="text-xs text-cook-text-secondary mt-1">
-                URL to your JSON metadata file. Must be publicly accessible.
-              </p>
-
-              {/* Show the JSON that needs to be hosted */}
-              <div className="mt-4 p-4 bg-cook-bg-secondary rounded-xl border border-cook-border">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-cook-text">Your metadata JSON:</span>
-                  <button
-                    type="button"
-                    onClick={copyMetadataJson}
-                    className="text-xs text-ton-blue hover:underline"
-                  >
-                    Copy to clipboard
-                  </button>
-                </div>
-                <pre className="text-xs text-cook-text-secondary overflow-x-auto p-2 bg-white rounded border border-cook-border">
-                  {generateMetadataJson()}
-                </pre>
-              </div>
-            </div>
-          )}
 
           {/* Mintable */}
           <div className="flex items-center justify-between p-4 bg-cook-bg-secondary rounded-xl border border-cook-border">
@@ -311,7 +339,7 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
                 onChange={handleChange}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-cook-border rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-cook-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-ton-blue"></div>
+              <div className="w-11 h-6 bg-cook-border rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-cook-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cook-orange"></div>
             </label>
           </div>
 
@@ -326,23 +354,6 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
                 <p className="text-sm text-cook-text-secondary">
                   Your token uses the official Jetton 2.0 contract from TON Core. 
                   Fully compatible with DeDust, STON.fi, and all wallets/explorers.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Metadata hosting info */}
-          <div className="p-4 bg-cook-orange/10 border border-cook-orange/20 rounded-xl">
-            <div className="flex items-start gap-3">
-              <svg className="w-5 h-5 text-cook-orange flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <div>
-                <h4 className="font-medium text-cook-orange mb-1">Metadata Hosting Required</h4>
-                <p className="text-sm text-cook-text-secondary">
-                  Jetton 2.0 requires off-chain metadata (JSON file hosted at a URL). 
-                  You can use <a href="https://nft.storage" target="_blank" className="text-ton-blue hover:underline">NFT.Storage</a> (free IPFS) 
-                  or any web server. The JSON must contain: name, symbol, description, image, decimals.
                 </p>
               </div>
             </div>
@@ -367,14 +378,13 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-center md:text-left">
             <p className="text-cook-text-secondary text-sm">Deployment cost</p>
-            <p className="text-cook-text font-semibold">1 TON</p>
-            <p className="text-xs text-cook-text-secondary">0.2 TON for deploy + 0.8 TON service fee</p>
+            <p className="text-2xl font-bold text-cook-text">1 TON</p>
           </div>
           
           <button
             type="submit"
             disabled={!isConnected || !isValid}
-            className="btn-primary w-full md:w-auto flex items-center justify-center gap-2 min-w-[200px]"
+            className="btn-cook w-full md:w-auto flex items-center justify-center gap-2 min-w-[200px] text-lg py-4"
           >
             {!isConnected ? (
               <>
@@ -388,7 +398,7 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
                 <img 
                   src="https://em-content.zobj.net/source/telegram/386/poultry-leg_1f357.webp" 
                   alt="" 
-                  className="w-5 h-5"
+                  className="w-6 h-6"
                 />
                 Cook Jetton
               </>

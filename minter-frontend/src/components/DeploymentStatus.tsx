@@ -36,7 +36,7 @@ export default function DeploymentStatus({ step, deployedAddress, onReset }: Dep
         <div className="p-4 bg-cook-bg-secondary rounded-xl mb-6">
           <p className="text-sm text-cook-text-secondary mb-2">Contract Address</p>
           <div className="flex items-center justify-center gap-2">
-            <code className="text-ton-blue font-mono text-sm break-all">{deployedAddress}</code>
+            <code className="text-cook-orange font-mono text-sm break-all">{deployedAddress}</code>
             <button
               onClick={() => navigator.clipboard.writeText(deployedAddress)}
               className="p-2 hover:bg-cook-border rounded-lg transition-colors"
@@ -81,13 +81,13 @@ export default function DeploymentStatus({ step, deployedAddress, onReset }: Dep
         </div>
 
         {/* Additional Info */}
-        <div className="mt-8 p-4 bg-ton-blue/10 border border-ton-blue/20 rounded-xl">
+        <div className="mt-8 p-4 bg-orange-50 border border-orange-200 rounded-xl">
           <div className="flex items-start gap-3 text-left">
-            <svg className="w-5 h-5 text-ton-blue flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5 text-cook-orange flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <div>
-              <h4 className="font-medium text-ton-blue mb-1">What&apos;s next?</h4>
+              <h4 className="font-medium text-cook-orange mb-1">Next Steps</h4>
               <ul className="text-sm text-cook-text-secondary space-y-1">
                 <li>• Add your token to a DEX (DeDust or STON.fi)</li>
                 <li>• Share the contract address with your community</li>
@@ -112,14 +112,13 @@ export default function DeploymentStatus({ step, deployedAddress, onReset }: Dep
 
           return (
             <div key={s.id} className="flex items-start mb-6 last:mb-0">
-              {/* Step Indicator */}
               <div className="flex flex-col items-center mr-4">
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
                     isCompleted
                       ? 'bg-green-500 text-white'
                       : isActive
-                      ? 'bg-ton-blue text-white animate-pulse'
+                      ? 'bg-cook-orange text-white animate-pulse'
                       : 'bg-cook-bg-secondary text-cook-text-secondary'
                   }`}
                 >
@@ -132,30 +131,19 @@ export default function DeploymentStatus({ step, deployedAddress, onReset }: Dep
                   )}
                 </div>
                 {index < steps.length - 2 && (
-                  <div
-                    className={`w-0.5 h-12 mt-2 ${
-                      isCompleted ? 'bg-green-500' : 'bg-cook-border'
-                    }`}
-                  />
+                  <div className={`w-0.5 h-12 mt-2 ${isCompleted ? 'bg-green-500' : 'bg-cook-border'}`} />
                 )}
               </div>
 
-              {/* Step Content */}
               <div className="pt-2">
-                <h3
-                  className={`font-semibold ${
-                    isActive ? 'text-cook-text' : isCompleted ? 'text-green-500' : 'text-cook-text-secondary'
-                  }`}
-                >
+                <h3 className={`font-semibold ${isActive ? 'text-cook-text' : isCompleted ? 'text-green-500' : 'text-cook-text-secondary'}`}>
                   {s.label}
                 </h3>
                 <p className="text-sm text-cook-text-secondary">{s.description}</p>
-
-                {/* Loading indicator for active step */}
                 {isActive && (
                   <div className="flex items-center gap-2 mt-2">
                     <div className="spinner" />
-                    <span className="text-sm text-ton-blue">Processing...</span>
+                    <span className="text-sm text-cook-orange">Processing...</span>
                   </div>
                 )}
               </div>
@@ -164,12 +152,8 @@ export default function DeploymentStatus({ step, deployedAddress, onReset }: Dep
         })}
       </div>
 
-      {/* Cancel Button */}
       <div className="text-center">
-        <button
-          onClick={onReset}
-          className="text-cook-text-secondary hover:text-cook-text text-sm transition-colors"
-        >
+        <button onClick={onReset} className="text-cook-text-secondary hover:text-cook-text text-sm transition-colors">
           Cancel deployment
         </button>
       </div>
