@@ -18,11 +18,12 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
     totalSupply: '1000000',
     mintable: true,
     metadataUrl: '',
+    metadataType: 'offchain', // Default to offchain
   });
 
   const [imagePreview, setImagePreview] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'basic' | 'advanced'>('basic');
-  const [imageSource, setImageSource] = useState<'upload' | 'url'>('upload');
+  const [imageSource, setImageSource] = useState<'upload' | 'url'>('url');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -48,7 +49,7 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
 
     if (name === 'image' && value) {
       setImagePreview(value);
-      setFormData(prev => ({ ...prev, imageData: '' })); // Clear uploaded image
+      setFormData(prev => ({ ...prev, imageData: '' }));
     }
   };
 
@@ -56,22 +57,20 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check file size (max 50KB for on-chain storage)
-    if (file.size > 50 * 1024) {
-      alert('Image too large. Maximum size is 50KB for on-chain storage. Use URL for larger images.');
+    if (file.size > 100 * 1024) {
+      alert('Image too large. Maximum size is 100KB.');
       return;
     }
 
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64 = reader.result as string;
-      // Extract just the base64 data (remove data:image/...;base64, prefix for storage)
       const base64Data = base64.split(',')[1];
       
       setFormData(prev => ({
         ...prev,
         imageData: base64Data,
-        image: '', // Clear URL when uploading
+        image: '',
       }));
       setImagePreview(base64);
     };
@@ -185,21 +184,21 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
                 <input
                   type="radio"
                   name="imageSource"
-                  checked={imageSource === 'upload'}
-                  onChange={() => setImageSource('upload')}
-                  className="mr-2 accent-cook-orange"
-                />
-                <span className="text-sm text-cook-text">Upload Image</span>
-              </label>
-              <label className="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  name="imageSource"
                   checked={imageSource === 'url'}
                   onChange={() => setImageSource('url')}
                   className="mr-2 accent-cook-orange"
                 />
                 <span className="text-sm text-cook-text">Image URL</span>
+              </label>
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="imageSource"
+                  checked={imageSource === 'upload'}
+                  onChange={() => setImageSource('upload')}
+                  className="mr-2 accent-cook-orange"
+                />
+                <span className="text-sm text-cook-text">Upload Image</span>
               </label>
             </div>
 
@@ -224,7 +223,7 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
                       </svg>
                       <span className="text-cook-text-secondary">Click to upload</span>
                     </label>
-                    <p className="text-xs text-cook-text-secondary mt-1">PNG, JPEG, GIF, WEBP. Small images work best.</p>
+                    <p className="text-xs text-cook-text-secondary mt-1">PNG, JPEG, GIF, WEBP</p>
                   </div>
                 ) : (
                   <div>
@@ -308,21 +307,74 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
             </p>
           </div>
 
-          {/* Off-chain Metadata URL (optional) */}
+          {/* Metadata Type Toggle */}
           <div className="p-4 bg-cook-bg-secondary rounded-xl border border-cook-border">
-            <h4 className="font-medium text-cook-text mb-2">Off-chain Metadata (Optional)</h4>
-            <p className="text-sm text-cook-text-secondary mb-3">
-              By default, metadata is stored on-chain. If you prefer off-chain storage, 
-              provide a URL to your JSON metadata file.
-            </p>
-            <input
-              type="url"
-              name="metadataUrl"
-              value={formData.metadataUrl}
-              onChange={handleChange}
-              placeholder="https://example.com/metadata.json"
-              className="input-ton"
-            />
+            <h4 className="font-medium text-cook-text mb-3">Metadata Storage</h4>
+            
+            <div className="flex gap-4 mb-4">
+              <label className="flex-1 cursor-pointer">
+                <input
+                  type="radio"
+                  name="metadataType"
+                  checked={formData.metadataType === 'offchain'}
+                  onChange={() => setFormData(prev => ({ ...prev, metadataType: 'offchain' }))}
+                  className="sr-only peer"
+                />
+                <div className="p-4 rounded-xl border-2 border-cook-border peer-checked:border-cook-orange peer-checked:bg-orange-50 transition-all">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg">🌐</span>
+                    <span className="font-medium text-cook-text">Off-chain</span>
+                    <span className="text-xs bg-cook-orange text-white px-2 py-0.5 rounded-full">Recommended</span>
+                  </div>
+                  <p className="text-xs text-cook-text-secondary">Metadata stored on GitHub. Maximum compatibility.</p>
+                </div>
+              </label>
+              
+              <label className="flex-1 cursor-pointer">
+                <input
+                  type="radio"
+                  name="metadataType"
+                  checked={formData.metadataType === 'onchain'}
+                  onChange={() => setFormData(prev => ({ ...prev, metadataType: 'onchain' }))}
+                  className="sr-only peer"
+                />
+                <div className="p-4 rounded-xl border-2 border-cook-border peer-checked:border-cook-orange peer-checked:bg-orange-50 transition-all">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg">⛓️</span>
+                    <span className="font-medium text-cook-text">On-chain</span>
+                  </div>
+                  <p className="text-xs text-cook-text-secondary">Metadata stored in contract. Fully decentralized.</p>
+                </div>
+              </label>
+            </div>
+
+            {formData.metadataType === 'offchain' && (
+              <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                <p className="text-xs text-orange-700">
+                  📁 Metadata will be automatically uploaded to GitHub and linked to your token.
+                </p>
+              </div>
+            )}
+
+            {/* Custom Metadata URL (optional) */}
+            {formData.metadataType === 'offchain' && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-cook-text mb-2">
+                  Custom Metadata URL (optional)
+                </label>
+                <input
+                  type="url"
+                  name="metadataUrl"
+                  value={formData.metadataUrl}
+                  onChange={handleChange}
+                  placeholder="Leave empty to auto-generate"
+                  className="input-ton"
+                />
+                <p className="text-xs text-cook-text-secondary mt-1">
+                  If you have your own metadata JSON hosted somewhere
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Mintable */}

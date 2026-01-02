@@ -321,6 +321,7 @@ export default function AIPage() {
         decimals: suggestion.decimals,
         totalSupply: suggestion.totalSupply,
         mintable: true,
+        metadataType: 'offchain',
       };
 
       const result = await deployJettonMinter(
@@ -386,9 +387,11 @@ export default function AIPage() {
           <div className="max-w-4xl mx-auto px-4 h-full flex flex-col">
             {/* Header */}
             <div className="text-center py-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 mb-4 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500">
-                <span className="text-3xl">🤖</span>
-              </div>
+              <img 
+                src="https://s4.ezgif.com/tmp/ezgif-4da3f36d99291476.gif" 
+                alt="Cook AI" 
+                className="w-24 h-24 mx-auto mb-4 rounded-2xl"
+              />
               <h1 className="text-3xl font-bold text-gray-800 mb-2">
                 Cook <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">AI</span>
               </h1>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Head from 'next/head';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -25,11 +25,36 @@ const MONETIZATION_WALLET = 'UQDjQOdWTP1bPpGpYExAsCcVLGPN_pzGvdno3aCk565ZnQIz';
 const DEPLOY_FEE = toNano('0.3');
 const MONETIZATION_FEE = toNano('0.7');
 
-// Stablecoin contract codes from https://github.com/ton-blockchain/stablecoin-contract
-// These are the official pre-compiled contracts with freeze functionality
-const STABLECOIN_MINTER_HEX = 'b5ee9c72410218010005bb000114ff00f4a413f4bcf2c80b0102016207020201200603020271050400cfaf16f6a2687d007d207d206a6a68bf99e836c1783872ebdb514d9c97c283b7f0ae5179029e2b6119c39462719e4f46ed8f7413e62c780a417877407e978f01a40711411b1acb773a96bdd93fa83bb5ca8435013c8c4b3ac91f4589b4780a38646583fa0064a180400085adbcf6a2687d007d207d206a6a688a2f827c1400b82a3002098a81e46581ac7d0100e78b00e78b6490e4658089fa00097a00658064fc80383a6465816503e5ffe4e8400025bd9adf6a2687d007d207d206a6a6888122f8240202cb0908001da23864658380e78b64814183fa0bc002f3d0cb434c0c05c6c238ecc200835c874c7c0608405e351466ea44c38601035c87e800c3b51343e803e903e90353534541168504d3214017e809400f3c58073c5b333327b55383e903e900c7e800c7d007e800c7e80004c5c3e0e80b4c7c04074cfc044bb51343e803e903e9035353449a084190adf41eeb8c089a150a03fa82107bdd97deba8ee7363805fa00fa40f82854120a70546004131503c8cb0358fa0201cf1601cf16c921c8cb0113f40012f400cb00c9f9007074c8cb02ca07cbffc9d05008c705f2e04a12a14414506603c85005fa025003cf1601cf16ccccc9ed54fa40d120d70b01c000b3915be30de02682102c76b973bae302352514120b04f882106501f354ba8e223134365145c705f2e04902fa40d1103402c85005fa025003cf1601cf16ccccc9ed54e0258210fb88e119ba8e2132343603d15131c705f2e0498b025512c85005fa025003cf1601cf16ccccc9ed54e034248210235caf52bae30237238210cb862902bae302365b2082102508d66abae3026c310f0e0d0c00188210d372158cbadc840ff2f0001e3002c705f2e049d4d4d101ed54fb040044335142c705f2e049c85003cf16c9134440c85005fa025003cf1601cf16ccccc9ed5402ec3031325033c705f2e049fa40fa00d4d120d0d31f01018040d7212182100f8a7ea5ba8e4d36208210595f07bcba8e2c3004fa0031fa4031f401d120f839206e943081169fde718102f270f8380170f836a0811a7770f836a0bcf2b08e138210eed236d3ba9504d30331d19434f2c048e2e2e30d500370111000c082103b9aca0070fb02f828450470546004131503c8cb0358fa0201cf1601cf16c921c8cb0113f40012f400cb00c920f9007074c8cb02ca07cbffc9d0c8801801cb0501cf1658fa02029858775003cb6bcccc9730017158cb6acce2c98011fb0000ce31fa0031fa4031fa4031f401fa0020d70b009ad74bc00101c001b0f2b19130e25442162191729171e2f839206e938124279120e2216e94318128739101e25023a813a0738103a370f83ca00270f83612a00170f836a07381040982100966018070f837a0bcf2b001fc145f04323401fa40d2000101d195c821cf16c9916de2c8801001cb055004cf1670fa027001cb6a8210d173540001cb1f500401cb3f23fa4430c0008e35f828440470546004131503c8cb0358fa0201cf1601cf16c921c8cb0113f40012f400cb00c9f9007074c8cb02ca07cbffc9d012cf1697316c127001cb01e2f400c91300088050fb000044c8801001cb0501cf1670fa027001cb6a8210d53276db01cb1f0101cb3fc98042fb00019635355161c705f2e04904fa4021fa4430c000f2e14dfa00d4d120d0d31f018210178d4519baf2e0488040d721fa00fa4031fa4031fa0020d70b009ad74bc00101c001b0f2b19130e254431b16018e2191729171e2f839206e938124279120e2216e94318128739101e25023a813a0738103a370f83ca00270f83612a00170f836a07381040982100966018070f837a0bcf2b025597f1700ec82103b9aca0070fb02f828450470546004131503c8cb0358fa0201cf1601cf16c921c8cb0113f40012f400cb00c920f9007074c8cb02ca07cbffc9d0c8801801cb0501cf1658fa02029858775003cb6bcccc9730017158cb6acce2c98011fb005005a04314c85005fa025003cf1601cf16ccccc9ed546f6e5bfb';
+// GitHub raw URL for offchain metadata
+const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/ViberKoder/offchaindata/main';
 
-const STABLECOIN_WALLET_HEX = 'b5ee9c7241020f010003d1000114ff00f4a413f4bcf2c80b01020162050202012004030021bc508f6a2686981fd007d207d2068af81c0027bfd8176a2686981fd007d207d206899fc152098402f8d001d0d3030171b08e48135f038020d721ed44d0d303fa00fa40fa40d104d31f01840f218210178d4519ba0282107bdd97deba12b1f2f48040d721fa003012a0401303c8cb0358fa0201cf1601cf16c9ed54e0fa40fa4031fa0031f401fa0031fa00013170f83a02d31f012082100f8a7ea5ba8e85303459db3ce0330c0602d0228210178d4519ba8e84325adb3ce034218210595f07bcba8e843101db3ce032208210eed236d3ba8e2f30018040d721d303d1ed44d0d303fa00fa40fa40d1335142c705f2e04a403303c8cb0358fa0201cf1601cf16c9ed54e06c218210d372158cbadc840ff2f0080701f2ed44d0d303fa00fa40fa40d106d33f0101fa00fa40f401d15141a15288c705f2e04926c2fff2afc882107bdd97de01cb1f5801cb3f01fa0221cf1658cf16c9c8801801cb0526cf1670fa02017158cb6accc903f839206e943081169fde718102f270f8380170f836a0811a7770f836a0bcf2b0028050fb00030903f4ed44d0d303fa00fa40fa40d12372b0c002f26d07d33f0101fa005141a004fa40fa4053bac705f82a5464e070546004131503c8cb0358fa0201cf1601cf16c921c8cb0113f40012f400cb00c9f9007074c8cb02ca07cbffc9d0500cc7051bb1f2e04a09fa0021925f04e30d26d70b01c000b393306c33e30d55020b0a09002003c8cb0358fa0201cf1601cf16c9ed54007a5054a1f82fa07381040982100966018070f837b60972fb02c8801001cb055005cf1670fa027001cb6a8210d53276db01cb1f5801cb3fc9810082fb00590060c882107362d09c01cb1f2501cb3f5004fa0258cf1658cf16c9c8801001cb0524cf1658fa02017158cb6accc98011fb0001f203d33f0101fa00fa4021fa4430c000f2e14ded44d0d303fa00fa40fa40d15309c7052471b0c00021b1f2ad522bc705500ab1f2e0495115a120c2fff2aff82a54259070546004131503c8cb0358fa0201cf1601cf16c921c8cb0113f40012f400cb00c920f9007074c8cb02ca07cbffc9d004fa40f401fa00200d019820d70b009ad74bc00101c001b0f2b19130e2c88210178d451901cb1f500a01cb3f5008fa0223cf1601cf1626fa025007cf16c9c8801801cb055004cf1670fa024063775003cb6bccccc945370e00b42191729171e2f839206e938124279120e2216e94318128739101e25023a813a0738103a370f83ca00270f83612a00170f836a07381040982100966018070f837a0bcf2b0048050fb005803c8cb0358fa0201cf1601cf16c9ed5401f9319e';
+// Using the Jetton 2.0 contracts from deploy.ts for Ice Jetton
+// These are the same contracts but will be deployed with different settings
+const STABLECOIN_MINTER_HEX = 'b5ee9c72410215010004e0000114ff00f4a413f4bcf2c80b0102016202100202cb030f02f7d0cb434c0c05c6c3000638ecc200835c874c7c0608405e351466ea44c38601035c87e800c3b51343e803e903e90353534541168504d3214017e809400f3c58073c5b333327b55383e903e900c7e800c7d007e800c7e80004c5c3e0e80b4c7c04074cfc044bb51343e803e903e9035353449a084190adf41eeb8c08e60408019635355161c705f2e04904fa4021fa4430c000f2e14dfa00d4d120d0d31f018210178d4519baf2e0488040d721fa00fa4031fa4031fa0020d70b009ad74bc00101c001b0f2b19130e254431b05018e2191729171e2f839206e9381239b9120e2216e94318128309101e25023a813a07381032c70f83ca00270f83612a00170f836a07381040282100966018070f837a0bcf2b025597f0601ea820898968070fb0224800bd721d70b07f82846057054201314c85003fa0201cf1601cf16c9227871c8cb00cb04cb0012f400f400cb00c9513384f701f90001b07074c8cb02ca0712cb07cbf7c9d0c8801801cb0501cf1658fa020397775003cb6bcccc96317158cb6acce2c98011fb005005a04314070022c85005fa025003cf1601cf16ccccc9ed5404e62582107bdd97debae3022582102c76b973ba8ecb355f033401fa40d2000101d195c821cf16c9916de2c8801001cb055004cf1670fa027001cb6a8210d173540001cb1f500401cb3f23fa4430c00097316c127001cb01e30df400c98050fb00e0342482106501f354bae302248210fb88e119ba090b0c0d01f23505fa00fa40f82854120722800bd721d70b0755207054201314c85003fa0201cf1601cf16c9227871c8cb00cb04cb0012f400f400cb00c984f701f90001b07074c8cb02ca0712cb07cbf7c9d05008c705f2e04a12a144145036c85005fa025003cf1601cf16ccccc9ed54fa40d120d70b01c000b3915be30d0a0044c8801001cb0501cf1670fa027001cb6a8210d53276db01cb1f0101cb3fc98042fb000092f828440422800bd721d70b0755207054201314c85003fa0201cf1601cf16c9227871c8cb00cb04cb0012f400f400cb00c984f701f90001b07074c8cb02ca0712cb07cbf7c9d012cf16004230335142c705f2e04902fa40d1400304c85005fa025003cf1601cf16ccccc9ed5401fe8e20313303d15131c705f2e0498b024034c85005fa025003cf1601cf16ccccc9ed54e02482107431f221ba8e2230335042c705f2e04901d18b028b024034c85005fa025003cf1601cf16ccccc9ed54e037238210cb862902ba8e22335142c705f2e049c85003cf16c9134440c85005fa025003cf1601cf16ccccc9ed54e0360e00505b2082102508d66aba9f3002c705f2e049d4d4d101ed54fb04e06c318210d372158cbadc840ff2f0001da23864658380e78b64814183fa0bc002012011120025bd9adf6a2687d007d207d206a6a6888122f824020271131400adadbcf6a2687d007d207d206a6a688a2f827c1400914005eb90eb8583aa90382a10098a642801fd0100e78b00e78b64913c38e4658065826580097a007a00658064c27b80fc8000d8383a6465816503896583e5fbe4e84000cfaf16f6a2687d007d207d206a6a68bf99e836c1783872ebdb514d9c97c283b7f0ae5179029e2b6119c39462719e4f46ed8f7413e62c780a417877407e978f01a40711411b1acb773a96bdd93fa83bb5ca8435013c8c4b3ac91f4589cc780a38646583fa0064a18040fa0d3a2f';
+
+const STABLECOIN_WALLET_HEX = 'b5ee9c7241020b010001ed000114ff00f4a413f4bcf2c80b0102016202030202cb04050009a11f9fe00502012006070201200809001d3b513434c7c07e1874c7c07e18b46000adf07c81421840084210b0fb11f82f9d30e30d21c00020d721ed44d0fa403020d749c120d74ac120925f04e001f8665300f00bbaf2e044c81001db4458f003cf0202d33f5380d430d0f8238210178d4519807d5580e0db3c22fa003000cf16c9c88210178d4519ba0100d31f30b1c2fff2e04712c200a120c20001d431d0c8cb01f84554c705f2e04ac8801001cb0501cf1670fa027001cb6a8210595f07bc01cb1f5801cb3f5003fa0221cf165006cf16c9c8801801cb0501cf1658fa020171cb6accc98100a4fb00c858cf16c9ed54007af8445454c705f2e04a12a120c00093f841f844c2009130e2c85005cf1623fa0213cb6acb1fcb3f5230cf16c9c88210178d4519ba0292f84505cb01c97001f2e05001f84505f2e0530202ce080900201480a0b00e5323334335233c705b1c2fff2e04aa12082100966018024a1c0068210178d451911c8cb0258cf1601cf1701cf16c9ed54e05ff84305c8cb0058cf16c9ed54f847c200c2009401f844c8cbff5004cf1612cb00cb01cb07c9d0f844cf168209c9c380fa02017158cb6accc98011fb0001f8458e5233333334335233c705b1c2fff2e04921c200935f04e08210d53276db01c8cb0201cf1601cf16c9ed54f847c200c2009401f845c8cbff5004cf1612cb00cb01cb07c9d0f845cf168209c9c380fa02017158cb6accc98011fb0001006b0082017e817e0040dec0a0ea7e0021e09080ea7e019e09014c0080ea7e005e09004c0080ea7e00de09004c0082026a0200d830840ff2f000e0084201c820cf1601cf1701cf16c9ed5404fa00fa40d3d73334c705f2e04a01d0e3020c8cb01f84554c705f2e04ac8801001cb0501cf1670fa027001cb6a8210595f07bc01cb1f5801cb3f5003fa0221cf165003cf16c9c8801801cb0501cf1658fa020171cb6accc98011fb000094c85004cf16580082f84500000000544f4e2053746162696c697a65642053746f636b205069636b204d696e746572';
+
+function hexToCell(hex: string): Cell {
+  return Cell.fromBoc(Buffer.from(hex, 'hex'))[0];
+}
+
+// Lazy loading to avoid SSR issues
+let _minterCode: Cell | null = null;
+let _walletCode: Cell | null = null;
+
+function getMinterCode(): Cell {
+  if (!_minterCode) {
+    _minterCode = hexToCell(STABLECOIN_MINTER_HEX);
+  }
+  return _minterCode;
+}
+
+function getWalletCode(): Cell {
+  if (!_walletCode) {
+    _walletCode = hexToCell(STABLECOIN_WALLET_HEX);
+  }
+  return _walletCode;
+}
 
 // Operation codes for stablecoin
 const Op = {
@@ -39,9 +64,10 @@ const Op = {
   set_status: 0xeed236d3, // For freezing wallets
   change_admin: 0x6501f354,
   claim_admin: 0xfb88e119,
+  top_up: 0xd372158c,
 };
 
-// Lock types
+// Lock types for set_status
 const LockType = {
   unlock: 0,   // Normal operation
   out: 1,      // Block outgoing transfers
@@ -49,8 +75,8 @@ const LockType = {
   full: 3,     // Block all transfers (frozen)
 };
 
-function hexToCell(hex: string): Cell {
-  return Cell.fromBoc(Buffer.from(hex, 'hex'))[0];
+function base64ToCell(base64: string): Cell {
+  return Cell.fromBase64(base64);
 }
 
 // Build on-chain metadata (TEP-64)
@@ -105,7 +131,6 @@ export default function IcePage() {
   // Admin mode state
   const [adminContractAddress, setAdminContractAddress] = useState('');
   const [targetWalletAddress, setTargetWalletAddress] = useState('');
-  const [selectedLockType, setSelectedLockType] = useState<number>(LockType.full);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -125,58 +150,69 @@ export default function IcePage() {
       setStep('preparing');
       setError('');
 
-      // Build metadata cell
+      // Generate metadata URL for offchain storage
+      const timestamp = Date.now();
+      const filename = `ice_${formData.symbol.toLowerCase()}_${timestamp}.json`;
+      const metadataUrl = `${GITHUB_RAW_BASE}/${filename}`;
+
+      // Build metadata cell - use offchain for compatibility
       let contentCell: Cell;
       if (formData.metadataUrl && formData.metadataUrl.trim()) {
         contentCell = buildOffchainMetadata(formData.metadataUrl.trim());
       } else {
-        contentCell = buildOnchainMetadata({
+        // Default to offchain with auto-generated URL
+        contentCell = buildOffchainMetadata(metadataUrl);
+        console.log('Ice Jetton metadata will be at:', metadataUrl);
+        console.log('Metadata:', {
           name: formData.name,
-          symbol: formData.symbol.toUpperCase(),
-          description: formData.description || formData.name,
-          image: formData.image || undefined,
+          symbol: formData.symbol,
+          description: formData.description,
+          image: formData.image,
           decimals: formData.decimals.toString(),
         });
       }
 
       const supplyWithDecimals = BigInt(formData.totalSupply) * BigInt(10 ** formData.decimals);
       
-      const minterCode = hexToCell(STABLECOIN_MINTER_HEX);
-      const walletCode = hexToCell(STABLECOIN_WALLET_HEX);
+      const minterCode = getMinterCode();
+      const walletCode = getWalletCode();
 
-      // Data structure for stablecoin: total_supply, admin, next_admin, wallet_code, content
+      // Data structure for stablecoin minter:
+      // total_supply:Coins admin_address:MsgAddress next_admin_address:MsgAddress jetton_wallet_code:^Cell content:^Cell
       const minterData = beginCell()
-        .storeCoins(0)
-        .storeAddress(wallet)
-        .storeAddress(null)
-        .storeRef(walletCode)
-        .storeRef(contentCell)
+        .storeCoins(0) // total_supply (will increase after mint)
+        .storeAddress(wallet) // admin_address
+        .storeAddress(null) // next_admin_address
+        .storeRef(walletCode) // jetton_wallet_code
+        .storeRef(contentCell) // content
         .endCell();
 
       const stateInit = { code: minterCode, data: minterData };
       const minterAddress = contractAddress(0, stateInit);
 
+      console.log('Deploying Ice Jetton to:', minterAddress.toString());
+
       setStep('deploying');
-      toast.loading('Confirm transaction in wallet...', { id: 'deploy' });
+      toast.loading('Confirm transaction in wallet (1 TON)...', { id: 'deploy' });
 
       const stateInitCell = beginCell().store(storeStateInit(stateInit)).endCell();
 
-      // Mint message
+      // Mint message for initial supply
       const internalTransferMsg = beginCell()
         .storeUint(Op.internal_transfer, 32)
-        .storeUint(0, 64)
-        .storeCoins(supplyWithDecimals)
-        .storeAddress(null)
-        .storeAddress(wallet)
-        .storeCoins(toNano('0.01'))
-        .storeMaybeRef(null)
+        .storeUint(0, 64) // query_id
+        .storeCoins(supplyWithDecimals) // jetton_amount
+        .storeAddress(null) // from_address
+        .storeAddress(wallet) // response_address
+        .storeCoins(toNano('0.01')) // forward_ton_amount
+        .storeMaybeRef(null) // forward_payload
         .endCell();
 
       const mintBody = beginCell()
         .storeUint(Op.mint, 32)
-        .storeUint(0, 64)
-        .storeAddress(wallet)
-        .storeCoins(toNano('0.1'))
+        .storeUint(0, 64) // query_id
+        .storeAddress(wallet) // to_address
+        .storeCoins(toNano('0.1')) // ton_amount for jetton wallet
         .storeRef(internalTransferMsg)
         .endCell();
 
@@ -233,17 +269,19 @@ export default function IcePage() {
         .storeUint(Op.set_status, 32)
         .storeUint(0, 64) // query_id
         .storeAddress(Address.parse(targetWalletAddress))
-        .storeUint(lockType, 4) // new_status
+        .storeUint(lockType, 4) // new_status (4 bits)
         .endCell();
 
-      await sendTransaction({
+      const result = await sendTransaction({
         to: adminContractAddress,
         value: toNano('0.1').toString(),
         body: setStatusBody.toBoc().toString('base64'),
       });
 
-      const statusName = lockType === 0 ? 'Unlocked' : lockType === 3 ? 'Frozen' : `Status ${lockType}`;
-      toast.success(`Wallet ${statusName}!`);
+      if (result) {
+        const statusName = lockType === 0 ? 'Unlocked' : lockType === 3 ? 'Frozen' : `Status ${lockType}`;
+        toast.success(`Wallet ${statusName}!`);
+      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to set status');
     } finally {
@@ -269,8 +307,9 @@ export default function IcePage() {
       <div className="min-h-screen flex flex-col bg-gradient-to-b from-blue-50 to-white">
         {/* Background */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-1/4 w-[500px] h-[500px] bg-gradient-to-br from-blue-400/20 to-cyan-400/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-gradient-to-br from-blue-300/15 to-sky-400/10 rounded-full blur-3xl" />
+          <div className="absolute top-20 left-1/4 w-[500px] h-[500px] bg-gradient-to-br from-blue-400/25 to-cyan-400/15 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-gradient-to-br from-blue-300/20 to-sky-400/15 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 left-1/2 w-[450px] h-[450px] bg-gradient-to-br from-cyan-400/15 to-blue-500/10 rounded-full blur-3xl" />
         </div>
 
         <Header />
@@ -381,7 +420,7 @@ export default function IcePage() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">Decimals</label>
-                          <input type="number" name="decimals" value={formData.decimals} onChange={handleChange} min={0} max={18} className="input-ice" />
+                          <input type="number" name="decimals" value={formData.decimals} onChange={(e) => setFormData(prev => ({ ...prev, decimals: parseInt(e.target.value) || 9 }))} min={0} max={18} className="input-ice" />
                         </div>
                       </div>
 
@@ -457,7 +496,7 @@ export default function IcePage() {
                     <div className="grid grid-cols-2 gap-4">
                       <button
                         onClick={() => handleSetStatus(LockType.full)}
-                        disabled={!connected || isProcessing}
+                        disabled={!connected || isProcessing || !adminContractAddress || !targetWalletAddress}
                         className="p-4 bg-red-50 border-2 border-red-200 rounded-xl hover:border-red-400 transition-colors disabled:opacity-50"
                       >
                         <div className="text-2xl mb-2">🥶</div>
@@ -467,7 +506,7 @@ export default function IcePage() {
 
                       <button
                         onClick={() => handleSetStatus(LockType.unlock)}
-                        disabled={!connected || isProcessing}
+                        disabled={!connected || isProcessing || !adminContractAddress || !targetWalletAddress}
                         className="p-4 bg-green-50 border-2 border-green-200 rounded-xl hover:border-green-400 transition-colors disabled:opacity-50"
                       >
                         <div className="text-2xl mb-2">🔓</div>

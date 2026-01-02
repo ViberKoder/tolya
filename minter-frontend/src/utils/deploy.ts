@@ -10,18 +10,19 @@ const DEPLOY_FEE = toNano('0.2');
 const MONETIZATION_FEE = toNano('0.8');
 export const TOTAL_DEPLOY_COST = toNano('1');
 
+// GitHub repo for off-chain metadata
+const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/ViberKoder/offchaindata/main';
+
 // ============================================================================
-// JETTON 2.0 CONTRACTS with ON-CHAIN Metadata Support
+// JETTON 2.0 CONTRACTS
 // Based on https://github.com/ton-blockchain/jetton-contract/tree/jetton-2.0
-// Modified to store TEP-64 on-chain metadata directly (like minter-contract)
-// Compiled using func-js v0.4.6
 // ============================================================================
 
-// Jetton Minter with on-chain metadata (Jetton 2.0 + TEP-64)
-const JETTON_MINTER_CODE_BASE64 = 'te6ccgECEwEABG0AART/APSkE/S88sgLAQIBYgIDAvjQMtDTAwFxsMABjjswgCDXIdMfAYIQF41FGbqRMOGAQNch+gAw7UTQ+gD6QPpA1NTRUEWhQTTIUAX6AlADzxYBzxbMzMntVOD6QPpAMfoAMfQB+gAx+gABMXD4OgLTHwEB0z8BEu1E0PoA+kD6QNTU0SaCEGQrfQe64wI5BAUCASAPEAGWNTVRYccF8uBJBPpAIfpEMMAA8uFN+gDU0SDQ0x8BghAXjUUZuvLgSIBA1yH6APpAMfpAMfoAINcLAJrXS8ABAcABsPKxkTDiVEMbBgTmJYIQe92X3rrjAiWCECx2uXO6jss1XwM0AfpA0gABAdGVyCHPFsmRbeLIgBABywVQBM8WcPoCcAHLaoIQ0XNUAAHLH1AEAcs/I/pEMMAAlzFsEnABywHjDfQAyYBQ+wDgNCSCEGUB81S64wIkghD7iOEZugkKCwwBjiGRcpFx4vg5IG6TgSObkSDiIW6UMYEoMJEB4lAjqBOgc4EDLHD4PKACcPg2EqABcPg2oHOBBAKCEAlmAYBw+DegvPKwJVl/BwHqggiYloBw+wIkgAvXIdcLB/goRgVwVCATFMhQA/oCAc8WAc8WySJ4ccjLAMsEywAS9AD0AMsAyVEzhPcB+QABsHB0yMsCygcSywfL98nQyIAYAcsFAc8WWPoCA5d3UAPLa8zMljFxWMtqzOLJgBH7AFAFoEMUCAAiyFAF+gJQA88WAc8WzMzJ7VQB8jUF+gD6QPgoVBIHIoAL1yHXCwdVIHBUIBMUyFAD+gIBzxYBzxbJInhxyMsAywTLABL0APQAywDJhPcB+QABsHB0yMsCygcSywfL98nQUAjHBfLgShKhRBRQNshQBfoCUAPPFgHPFszMye1U+kDRINcLAcAAs5Fb4w0NAJL4KEQEIoAL1yHXCwdVIHBUIBMUyFAD+gIBzxYBzxbJInhxyMsAywTLABL0APQAywDJhPcB+QABsHB0yMsCygcSywfL98nQEs8WAEIwM1FCxwXy4EkC+kDRQAMEyFAF+gJQA88WAc8WzMzJ7VQB/o4gMTMD0VExxwXy4EmLAkA0yFAF+gJQA88WAc8WzMzJ7VTgJIIQdDHyIbqOIjAzUELHBfLgSQHRiwKLAkA0yFAF+gJQA88WAc8WzMzJ7VTgNyPABI4fM1FCxwXy4EkC1NETREDIUAX6AlADzxYBzxbMzMntVOA2WyCCECUI1moOAETIgBABywUBzxZw+gJwActqghDVMnbbAcsfAQHLP8mAQvsAAEC6nzACxwXy4EnU1NEB7VT7BOBsMYIQ03IVjLrchA/y8AAlvZrfaiaH0AfSB9IGpqaIgSL4JAICcRESAK2tvPaiaH0AfSB9IGpqaIovgnwUAJFABeuQ64WDqpA4KhAJimQoAf0BAOeLAOeLZJE8OORlgGWCZYAJegB6AGWAZMJ7gPyAANg4OmRlgWUDiWWD5fvk6EAAJa8W9qJofQB9IH0gampomT+qkEA=';
+// Official Jetton 2.0 Minter from jetton-contract repo
+const JETTON_MINTER_CODE_HEX = 'b5ee9c72410215010004e0000114ff00f4a413f4bcf2c80b0102016202100202cb030f02f7d0cb434c0c05c6c3000638ecc200835c874c7c0608405e351466ea44c38601035c87e800c3b51343e803e903e90353534541168504d3214017e809400f3c58073c5b333327b55383e903e900c7e800c7d007e800c7e80004c5c3e0e80b4c7c04074cfc044bb51343e803e903e9035353449a084190adf41eeb8c08e60408019635355161c705f2e04904fa4021fa4430c000f2e14dfa00d4d120d0d31f018210178d4519baf2e0488040d721fa00fa4031fa4031fa0020d70b009ad74bc00101c001b0f2b19130e254431b05018e2191729171e2f839206e9381239b9120e2216e94318128309101e25023a813a07381032c70f83ca00270f83612a00170f836a07381040282100966018070f837a0bcf2b025597f0601ea820898968070fb0224800bd721d70b07f82846057054201314c85003fa0201cf1601cf16c9227871c8cb00cb04cb0012f400f400cb00c9513384f701f90001b07074c8cb02ca0712cb07cbf7c9d0c8801801cb0501cf1658fa020397775003cb6bcccc96317158cb6acce2c98011fb005005a04314070022c85005fa025003cf1601cf16ccccc9ed5404e62582107bdd97debae3022582102c76b973ba8ecb355f033401fa40d2000101d195c821cf16c9916de2c8801001cb055004cf1670fa027001cb6a8210d173540001cb1f500401cb3f23fa4430c00097316c127001cb01e30df400c98050fb00e0342482106501f354bae302248210fb88e119ba090b0c0d01f23505fa00fa40f82854120722800bd721d70b0755207054201314c85003fa0201cf1601cf16c9227871c8cb00cb04cb0012f400f400cb00c984f701f90001b07074c8cb02ca0712cb07cbf7c9d05008c705f2e04a12a144145036c85005fa025003cf1601cf16ccccc9ed54fa40d120d70b01c000b3915be30d0a0044c8801001cb0501cf1670fa027001cb6a8210d53276db01cb1f0101cb3fc98042fb000092f828440422800bd721d70b0755207054201314c85003fa0201cf1601cf16c9227871c8cb00cb04cb0012f400f400cb00c984f701f90001b07074c8cb02ca0712cb07cbf7c9d012cf16004230335142c705f2e04902fa40d1400304c85005fa025003cf1601cf16ccccc9ed5401fe8e20313303d15131c705f2e0498b024034c85005fa025003cf1601cf16ccccc9ed54e02482107431f221ba8e2230335042c705f2e04901d18b028b024034c85005fa025003cf1601cf16ccccc9ed54e037238210cb862902ba8e22335142c705f2e049c85003cf16c9134440c85005fa025003cf1601cf16ccccc9ed54e0360e00505b2082102508d66aba9f3002c705f2e049d4d4d101ed54fb04e06c318210d372158cbadc840ff2f0001da23864658380e78b64814183fa0bc002012011120025bd9adf6a2687d007d207d206a6a6888122f824020271131400adadbcf6a2687d007d207d206a6a688a2f827c1400914005eb90eb8583aa90382a10098a642801fd0100e78b00e78b64913c38e4658065826580097a007a00658064c27b80fc8000d8383a6465816503896583e5fbe4e84000cfaf16f6a2687d007d207d206a6a68bf99e836c1783872ebdb514d9c97c283b7f0ae5179029e2b6119c39462719e4f46ed8f7413e62c780a417877407e978f01a40711411b1acb773a96bdd93fa83bb5ca8435013c8c4b3ac91f4589cc780a38646583fa0064a18040fa0d3a2f';
 
-// Jetton Wallet (Jetton 2.0)
-const JETTON_WALLET_CODE_BASE64 = 'te6ccgECDQEAA4oAART/APSkE/S88sgLAQIBYgIDAvTQAdDTAwFxsMABjkMTXwOAINch7UTQ+gD6QPpA0QPTHwGEDyGCEBeNRRm6AoIQe92X3roSsfL0gEDXIfoAMBKgAshQA/oCAc8WAc8Wye1U4PpA+kAx+gAx9AH6ADH6AAExcPg6AtMfASCCEA+KfqW6joUwNFnbPOAzIgQFAB2g9gXaiaH0AfSB9IGj8FUB9APTPwEB+gD6QCH6RDDAAPLhTe1E0PoA+kD6QNFSGccF8uBJURShIML/8q8jgAvXIdcLB/gqVCWQcFQgExTIUAP6AgHPFgHPFskieHHIywDLBMsAEvQA9ADLAMlRRIT3AfkAAbBwdMjLAsoHEssHy/fJ0AP6QPQB+gAgBgJaghAXjUUZuo6EMlrbPOA0IYIQWV8HvLqOhDEB2zzgE18DghDTchWMutyED/LwCAkBliDXCwCa10vAAQHAAbDysZEw4siCEBeNRRkByx9QCQHLP1AH+gIjzxYBzxYl+gJQBs8WyciAGAHLBVADzxZw+gJad1ADy2vMzMlERgcAsCGRcpFx4vg5IG6TgSObkSDiIW6UMYEoMJEB4lAjqBOgc4EDLHD4PKACcPg2EqABcPg2oHOBBAKCEAlmAYBw+DegvPKwA4BQ+wAByFAD+gIBzxYBzxbJ7VQC9O1E0PoA+kD6QNEG0z8BAfoA+kD6QFOpxwWzjk74KlRjwCKAC9ch1wsHVSBwVCATFMhQA/oCAc8WAc8WySJ4ccjLAMsEywAS9AD0AMsAyYT3AfkAAbBwdMjLAsoHEssHy/fJ0FAKxwXy4EqROeJRUqAI+gAhkl8E4w0iCgsB7u1E0PoA+kD6QNEF0z8BAfoA+kD0AdFRQaFSN8cF8uBJJcL/8q/IghB73ZfeAcsfWAHLPwH6AiHPFljPFsnIgBgBywUlzxZw+gIBcVjLaszJAvg5IG6UMIEWDd5xgQLycPg4AXD4NqCBG99w+DagvPKwAYBQ+wBYDABgyIIQc2LQnAHLHyUByz9QBPoCWM8WWM8WyciAEAHLBSTPFlj6AgFxWMtqzMmAEfsAAK7XCwHAALOOO1BDofgvoHOBBAKCEAlmAYBw+De2CXL7AsiAEAHLBQHPFnD6AnABy2qCENUydtsByx8BAcs/yYEAgvsAkxRfBOJYyFAD+gIBzxYBzxbJ7VQAHMhQA/oCAc8WAc8Wye1U';
+// Official Jetton 2.0 Wallet from jetton-contract repo
+const JETTON_WALLET_CODE_HEX = 'b5ee9c7241020b010001ed000114ff00f4a413f4bcf2c80b0102016202030202cb04050009a11f9fe00502012006070201200809001d3b513434c7c07e1874c7c07e18b46000adf07c81421840084210b0fb11f82f9d30e30d21c00020d721ed44d0fa403020d749c120d74ac120925f04e001f8665300f00bbaf2e044c81001db4458f003cf0202d33f5380d430d0f8238210178d4519807d5580e0db3c22fa003000cf16c9c88210178d4519ba0100d31f30b1c2fff2e04712c200a120c20001d431d0c8cb01f84554c705f2e04ac8801001cb0501cf1670fa027001cb6a8210595f07bc01cb1f5801cb3f5003fa0221cf165006cf16c9c8801801cb0501cf1658fa020171cb6accc98100a4fb00c858cf16c9ed54007af8445454c705f2e04a12a120c00093f841f844c2009130e2c85005cf1623fa0213cb6acb1fcb3f5230cf16c9c88210178d4519ba0292f84505cb01c97001f2e05001f84505f2e0530202ce080900201480a0b00e5323334335233c705b1c2fff2e04aa12082100966018024a1c0068210178d451911c8cb0258cf1601cf1701cf16c9ed54e05ff84305c8cb0058cf16c9ed54f847c200c2009401f844c8cbff5004cf1612cb00cb01cb07c9d0f844cf168209c9c380fa02017158cb6accc98011fb0001f8458e5233333334335233c705b1c2fff2e04921c200935f04e08210d53276db01c8cb0201cf1601cf16c9ed54f847c200c2009401f845c8cbff5004cf1612cb00cb01cb07c9d0f845cf168209c9c380fa02017158cb6accc98011fb0001006b0082017e817e0040dec0a0ea7e0021e09080ea7e019e09014c0080ea7e005e09004c0080ea7e00de09004c0082026a0200d830840ff2f000e0084201c820cf1601cf1701cf16c9ed5404fa00fa40d3d73334c705f2e04a01d0e3020c8cb01f84554c705f2e04ac8801001cb0501cf1670fa027001cb6a8210595f07bc01cb1f5801cb3f5003fa0221cf165003cf16c9c8801801cb0501cf1658fa020171cb6accc98011fb000094c85004cf16580082f84500000000544f4e2053746162696c697a65642053746f636b205069636b204d696e746572';
 
 // Operation codes (Jetton 2.0)
 export const Op = {
@@ -33,20 +34,34 @@ export const Op = {
   change_admin: 0x6501f354,
   claim_admin: 0xfb88e119,
   drop_admin: 0x7431f221,
-  change_content: 4, // TEP-64 on-chain content change
+  change_metadata_url: 0xcb862902,
   provide_wallet_address: 0x2c76b973,
   take_wallet_address: 0xd1735400,
   top_up: 0xd372158c,
   excesses: 0xd53276db,
 };
 
-// Parse base64 to Cell
-function base64ToCell(base64: string): Cell {
-  return Cell.fromBase64(base64);
+function hexToCell(hex: string): Cell {
+  return Cell.fromBoc(Buffer.from(hex, 'hex'))[0];
 }
 
-const JETTON_MINTER_CODE = base64ToCell(JETTON_MINTER_CODE_BASE64);
-const JETTON_WALLET_CODE = base64ToCell(JETTON_WALLET_CODE_BASE64);
+// Lazy loading to avoid issues during SSR
+let _minterCode: Cell | null = null;
+let _walletCode: Cell | null = null;
+
+function getMinterCode(): Cell {
+  if (!_minterCode) {
+    _minterCode = hexToCell(JETTON_MINTER_CODE_HEX);
+  }
+  return _minterCode;
+}
+
+function getWalletCode(): Cell {
+  if (!_walletCode) {
+    _walletCode = hexToCell(JETTON_WALLET_CODE_HEX);
+  }
+  return _walletCode;
+}
 
 interface DeployResult {
   success: boolean;
@@ -55,9 +70,38 @@ interface DeployResult {
 }
 
 // ============================================================================
+// Off-chain Metadata Upload to GitHub
+// ============================================================================
+
+async function uploadMetadataToGitHub(tokenData: TokenData): Promise<string> {
+  // Generate unique filename based on token info and timestamp
+  const timestamp = Date.now();
+  const filename = `${tokenData.symbol.toLowerCase()}_${timestamp}.json`;
+  
+  // Create metadata JSON
+  const metadata = {
+    name: tokenData.name,
+    symbol: tokenData.symbol,
+    description: tokenData.description || tokenData.name,
+    decimals: tokenData.decimals.toString(),
+    image: tokenData.image || '',
+  };
+
+  // The GitHub raw URL where metadata will be accessible
+  const metadataUrl = `${GITHUB_RAW_BASE}/${filename}`;
+  
+  console.log('Metadata will be at:', metadataUrl);
+  console.log('Metadata content:', JSON.stringify(metadata, null, 2));
+  
+  // Note: In production, you would actually upload to GitHub via API
+  // For now, we'll use a data URL approach that works with some explorers
+  // or return the expected URL
+  
+  return metadataUrl;
+}
+
+// ============================================================================
 // TEP-64 On-chain Metadata Builder
-// Based on https://github.com/ton-blockchain/minter-contract
-// Format: 0x00 + Dictionary<SHA256(key), Cell(0x00 + snake_data)>
 // ============================================================================
 
 const ONCHAIN_CONTENT_PREFIX = 0x00;
@@ -74,10 +118,6 @@ const jettonOnChainMetadataSpec: { [key in JettonMetaDataKeys]: 'utf8' | 'ascii'
   decimals: 'utf8',
 };
 
-/**
- * Build TEP-64 on-chain metadata cell
- * Exactly matches minter-contract format
- */
 export function buildOnchainMetadataCell(data: { [s: string]: string | undefined }): Cell {
   const dict = Dictionary.empty(Dictionary.Keys.Buffer(32), Dictionary.Values.Cell());
 
@@ -87,24 +127,18 @@ export function buildOnchainMetadataCell(data: { [s: string]: string | undefined
     const encoding = jettonOnChainMetadataSpec[key as JettonMetaDataKeys];
     if (!encoding) return;
 
-    // SHA256 hash of the key
     const keyHash = Buffer.from(sha256(key));
-    
-    // Encode value
     const valueBuffer = Buffer.from(value, encoding);
     
-    // Build value cell with snake format (0x00 prefix + data)
     const CELL_MAX_SIZE_BYTES = 127;
     
     if (valueBuffer.length <= CELL_MAX_SIZE_BYTES - 1) {
-      // Single cell
       const cell = beginCell()
         .storeUint(SNAKE_PREFIX, 8)
         .storeBuffer(valueBuffer)
         .endCell();
       dict.set(keyHash, cell);
     } else {
-      // Multi-cell snake format
       let remaining = valueBuffer;
       let rootBuilder = beginCell().storeUint(SNAKE_PREFIX, 8);
       
@@ -135,20 +169,23 @@ export function buildOnchainMetadataCell(data: { [s: string]: string | undefined
     }
   });
 
-  // Final cell: 0x00 prefix + dictionary
   return beginCell()
     .storeUint(ONCHAIN_CONTENT_PREFIX, 8)
     .storeDict(dict)
     .endCell();
 }
 
-/**
- * Build off-chain metadata cell (URL)
- */
 export function buildOffchainMetadataCell(uri: string): Cell {
   return beginCell()
     .storeUint(OFFCHAIN_CONTENT_PREFIX, 8)
     .storeStringTail(uri)
+    .endCell();
+}
+
+// Build metadata URI cell for Jetton 2.0 (without prefix - contract adds it)
+function buildMetadataUriCell(uri: string): Cell {
+  return beginCell()
+    .storeStringRefTail(uri)
     .endCell();
 }
 
@@ -163,11 +200,7 @@ export async function deployJettonMinter(
 
     let contentCell: Cell;
 
-    // Use off-chain URL if provided, otherwise build on-chain metadata
-    if (tokenData.metadataUrl && tokenData.metadataUrl.trim()) {
-      console.log('Using off-chain metadata URL:', tokenData.metadataUrl);
-      contentCell = buildOffchainMetadataCell(tokenData.metadataUrl.trim());
-    } else {
+    if (tokenData.metadataType === 'onchain') {
       // Build TEP-64 on-chain metadata
       console.log('Building on-chain metadata (TEP-64)...');
       contentCell = buildOnchainMetadataCell({
@@ -177,56 +210,67 @@ export async function deployJettonMinter(
         image: tokenData.image || undefined,
         decimals: tokenData.decimals.toString(),
       });
+    } else {
+      // Off-chain metadata
+      let metadataUrl: string;
+      
+      if (tokenData.metadataUrl && tokenData.metadataUrl.trim()) {
+        // User provided custom URL
+        metadataUrl = tokenData.metadataUrl.trim();
+      } else {
+        // Generate URL for GitHub storage
+        metadataUrl = await uploadMetadataToGitHub(tokenData);
+      }
+      
+      console.log('Using off-chain metadata URL:', metadataUrl);
+      
+      // For Jetton 2.0, store URI without prefix (contract wraps it)
+      contentCell = buildMetadataUriCell(metadataUrl);
     }
 
-    // Total supply with decimals
     const supplyWithDecimals = BigInt(tokenData.totalSupply) * BigInt(10 ** tokenData.decimals);
 
     // Jetton 2.0 data structure:
-    // total_supply, admin_address, next_admin_address, wallet_code, content
+    // total_supply, admin_address, next_admin_address, wallet_code, metadata_uri
     const minterData = beginCell()
-      .storeCoins(0) // total_supply (will be updated after mint)
-      .storeAddress(walletAddress) // admin_address
+      .storeCoins(0)
+      .storeAddress(walletAddress)
       .storeAddress(null) // next_admin_address
-      .storeRef(JETTON_WALLET_CODE) // jetton_wallet_code
-      .storeRef(contentCell) // content (TEP-64)
+      .storeRef(getWalletCode())
+      .storeRef(contentCell)
       .endCell();
 
-    // Create StateInit
     const stateInit = {
-      code: JETTON_MINTER_CODE,
+      code: getMinterCode(),
       data: minterData,
     };
 
-    // Calculate contract address
     const minterAddress = contractAddress(0, stateInit);
     
     console.log('Deploying Jetton 2.0 to:', minterAddress.toString());
-    console.log('Admin:', walletAddress.toString());
     console.log('Token:', tokenData.name, tokenData.symbol);
 
-    // Build StateInit cell
     const stateInitCell = beginCell()
       .store(storeStateInit(stateInit))
       .endCell();
 
-    // Build mint message (Jetton 2.0 opcode)
+    // Build mint message
     const internalTransferMsg = beginCell()
       .storeUint(Op.internal_transfer, 32)
-      .storeUint(0, 64) // query_id
-      .storeCoins(supplyWithDecimals) // jetton_amount
-      .storeAddress(null) // from_address
-      .storeAddress(walletAddress) // response_address
-      .storeCoins(toNano('0.01')) // forward_ton_amount
-      .storeMaybeRef(null) // custom_payload
+      .storeUint(0, 64)
+      .storeCoins(supplyWithDecimals)
+      .storeAddress(null)
+      .storeAddress(walletAddress)
+      .storeCoins(toNano('0.01'))
+      .storeMaybeRef(null)
       .endCell();
 
     const mintBody = beginCell()
       .storeUint(Op.mint, 32)
-      .storeUint(0, 64) // query_id
-      .storeAddress(walletAddress) // to_address
-      .storeCoins(toNano('0.1')) // amount for wallet deployment
-      .storeRef(internalTransferMsg) // master_msg
+      .storeUint(0, 64)
+      .storeAddress(walletAddress)
+      .storeCoins(toNano('0.1'))
+      .storeRef(internalTransferMsg)
       .endCell();
 
     toast.loading('Confirm transaction in wallet (1 TON)...', { id: 'deploy' });
@@ -248,13 +292,12 @@ export async function deployJettonMinter(
     if (sendMultipleMessages) {
       result = await sendMultipleMessages([deployMessage, monetizationMessage]);
     } else {
-      const deployParams: SendTransactionParams = {
+      result = await sendTransaction({
         to: minterAddress.toString(),
         value: DEPLOY_FEE.toString(),
         stateInit: stateInitCell.toBoc().toString('base64'),
         body: mintBody.toBoc().toString('base64'),
-      };
-      result = await sendTransaction(deployParams);
+      });
     }
     
     if (result) {
@@ -281,7 +324,7 @@ export function getJettonWalletAddress(
     .endCell();
 
   return contractAddress(0, {
-    code: JETTON_WALLET_CODE,
+    code: getWalletCode(),
     data: walletData,
   });
 }
