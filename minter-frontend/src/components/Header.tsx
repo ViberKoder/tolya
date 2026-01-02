@@ -31,12 +31,6 @@ export default function Header() {
               Ice Jetton
             </Link>
             <Link 
-              href="/ai"
-              className="text-cook-text-secondary hover:text-purple-500 transition-colors text-sm font-medium"
-            >
-              AI Chat
-            </Link>
-            <Link 
               href="/admin"
               className="text-cook-text-secondary hover:text-cook-orange transition-colors text-sm font-medium"
             >

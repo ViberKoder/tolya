@@ -324,7 +324,6 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-lg">🌐</span>
                     <span className="font-medium text-cook-text">Off-chain</span>
-                    <span className="text-xs bg-cook-orange text-white px-2 py-0.5 rounded-full">Recommended</span>
                   </div>
                   <p className="text-xs text-cook-text-secondary">Metadata stored on GitHub. Maximum compatibility.</p>
                 </div>
