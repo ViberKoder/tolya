@@ -22,13 +22,19 @@ export default function Header() {
               href="/"
               className="text-cook-text-secondary hover:text-cook-orange transition-colors text-sm font-medium"
             >
-              Create Token
+              Jetton 2.0
             </Link>
             <Link 
               href="/ice"
               className="text-cook-text-secondary hover:text-ton-blue transition-colors text-sm font-medium"
             >
               Ice Jetton
+            </Link>
+            <Link 
+              href="/ai"
+              className="text-cook-text-secondary hover:text-purple-500 transition-colors text-sm font-medium"
+            >
+              AI Chat
             </Link>
             <Link 
               href="/admin"

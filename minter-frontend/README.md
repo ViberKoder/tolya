@@ -1,23 +1,47 @@
-# Cook - Jetton 2.0 Minter for TON
+# Cook - Jetton Minter for TON
 
 <p align="center">
-  <img src="https://em-content.zobj.net/source/telegram/386/poultry-leg_1f357.webp" width="80" height="80" alt="Cook Logo">
+  <img src="https://em-content.zobj.net/source/telegram/386/poultry-leg_1f357.webp" width="120" height="120" alt="Cook Logo">
 </p>
 
 <p align="center">
   <strong>Cook your Jetton 2.0 on TON</strong>
 </p>
 
-Cook is a modern web application for creating and managing Jetton 2.0 tokens on The Open Network (TON). Built with the official Jetton 2.0 contracts from [ton-blockchain/jetton-contract](https://github.com/ton-blockchain/jetton-contract/tree/jetton-2.0).
+Cook is a modern web application for creating and managing Jetton tokens on The Open Network (TON). Features **true on-chain metadata** (TEP-64) based on [ton-blockchain/minter-contract](https://github.com/ton-blockchain/minter-contract).
 
 ## Features
 
-- 🍗 **Jetton 2.0 Standard** - Uses the official Jetton 2.0 contracts from TON Core
-- ⚡ **3x Faster** - Jetton 2.0 transactions are up to 3 times faster than Jetton 1.0
-- 🔗 **Full Compatibility** - Works with DeDust, STON.fi, and all TON wallets/explorers
-- 🎨 **Modern UI** - Clean, light theme with TON and Telegram design style
+- 🍗 **On-chain Metadata** - True TEP-64 on-chain metadata for maximum compatibility
+- ⚡ **Jetton 2.0** - Uses latest Jetton standard with improved performance
+- 🔗 **Full Compatibility** - Works with DeDust, STON.fi, TonViewer, and all TON wallets
+- ❄️ **Ice Jetton** - Create freezable tokens based on stablecoin contracts
+- 🤖 **AI Assistant** - Get help with token narratives, tokenomics, and ideas
+- 🎨 **Modern UI** - Clean, light theme with orange gradients
 - 📱 **TON Connect** - Easy wallet connection with TON Connect 2.0
-- 🛠️ **Admin Panel** - Manage minting, admin rights, and token settings
+- 🛠️ **Admin Panel** - Manage minting, admin rights, metadata, and token settings
+
+## Sections
+
+### Jetton 2.0
+Standard Jetton tokens with on-chain metadata. Perfect for:
+- Utility tokens
+- Governance tokens
+- Meme tokens
+- Any fungible token
+
+### Ice Jetton ❄️
+Freezable tokens based on TON's stablecoin contract. Features:
+- Admin can freeze/unfreeze individual wallets
+- Frozen wallets cannot transfer tokens
+- Perfect for stablecoins and regulated assets
+
+### AI Chat 🤖
+Interactive assistant to help you:
+- Brainstorm token names and narratives
+- Design tokenomics
+- Create token descriptions
+- Plan lockup strategies
 
 ## Getting Started
 
@@ -54,33 +78,24 @@ npm start
 ### Token Creation
 
 1. **Connect Wallet** - Connect your TON wallet using TON Connect
-2. **Fill Token Details** - Enter name, symbol, description, image URL, and supply
-3. **Deploy** - Confirm the transaction (1 TON total: 0.2 TON deploy fee + 0.8 TON service fee)
-4. **Done!** - Your Jetton 2.0 token is now live on TON
+2. **Fill Token Details** - Enter name, symbol, description, image, and supply
+3. **Deploy** - Confirm the transaction (1 TON deployment cost)
+4. **Done!** - Your token is now live on TON
 
-### Metadata Hosting
+### On-chain Metadata (TEP-64)
 
-Jetton 2.0 requires off-chain metadata (a JSON file hosted at a public URL). Cook automatically handles this by:
-
-1. **Auto-upload** - Automatically uploads your metadata to a free JSON hosting service
-2. **Manual URL** - Or provide your own URL (IPFS, GitHub, or any web server)
-
-The metadata JSON format:
-```json
-{
-  "name": "My Token",
-  "symbol": "MTK",
-  "description": "My awesome token",
-  "image": "https://example.com/logo.png",
-  "decimals": "9"
-}
-```
+Cook uses true on-chain metadata storage:
+- Token name, symbol, description stored directly in contract
+- Image can be uploaded or referenced via URL
+- Maximum compatibility with all explorers and DEXes
+- Optional: Provide your own off-chain metadata URL
 
 ### Admin Panel
 
 After deployment, you can manage your token:
 
 - **Mint** - Create additional tokens (if you're the admin)
+- **Update Metadata** - Change token name, symbol, description, image
 - **Transfer Admin** - Transfer admin rights to another address
 - **Revoke Admin** - Make the token fully decentralized (irreversible!)
 
@@ -89,23 +104,22 @@ After deployment, you can manage your token:
 - **Frontend**: Next.js 14, React 18, TypeScript
 - **Styling**: Tailwind CSS
 - **Blockchain**: @ton/core, @tonconnect/ui-react
-- **Smart Contracts**: Official Jetton 2.0 from TON Core
+- **Smart Contracts**: Compiled FunC contracts from minter-contract
 
 ## Contract Details
 
-This app uses the official Jetton 2.0 contracts from:
-https://github.com/ton-blockchain/jetton-contract/tree/jetton-2.0
-
-Key features of Jetton 2.0:
+### Jetton 2.0
+Based on minter-contract with on-chain metadata support:
 - TEP-74 (Jetton Standard) compatible
-- TEP-64 (Token Data Standard) metadata
-- Admin transfer with confirmation (change_admin + claim_admin)
-- Drop admin functionality for decentralization
+- TEP-64 (Token Data Standard) on-chain metadata
+- Admin management with transfer and revoke functionality
 - Optimized gas usage
 
-## License
-
-MIT
+### Ice Jetton (Stablecoin)
+Based on stablecoin-contract:
+- All Jetton 2.0 features
+- `set_status` operation for freezing wallets
+- Lock types: unlock, out, in, full
 
 ## Links
 
@@ -113,3 +127,10 @@ MIT
 - [Jetton Standard (TEP-74)](https://github.com/ton-blockchain/TEPs/blob/master/text/0074-jettons-standard.md)
 - [Token Data Standard (TEP-64)](https://github.com/ton-blockchain/TEPs/blob/master/text/0064-token-data-standard.md)
 - [TON Explorer](https://tonviewer.com)
+- [Cook Community](https://t.me/cookcm)
+
+## License
+
+MIT
+
+© 2026 Cook. Built on TON Blockchain.

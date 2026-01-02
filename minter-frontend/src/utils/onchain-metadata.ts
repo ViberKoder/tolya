@@ -1,125 +1,133 @@
-import { beginCell, Cell, Dictionary } from '@ton/core';
+import { beginCell, Cell, Dictionary, Builder } from '@ton/core';
 import { sha256 } from '@noble/hashes/sha256';
 
 /**
  * TEP-64 On-chain Metadata Builder
+ * Based on https://github.com/ton-blockchain/minter-contract
  * https://github.com/ton-blockchain/TEPs/blob/master/text/0064-token-data-standard.md
- * 
- * On-chain layout: 0x00 prefix + dictionary with SHA256 keys
  */
 
-// Pre-computed SHA256 hashes for standard metadata keys
-export const ONCHAIN_CONTENT_PREFIX = 0x00;
-export const OFFCHAIN_CONTENT_PREFIX = 0x01;
+const ONCHAIN_CONTENT_PREFIX = 0x00;
+const OFFCHAIN_CONTENT_PREFIX = 0x01;
+const SNAKE_PREFIX = 0x00;
 
-// Standard metadata key hashes (SHA256 of key names)
-export const MetadataKeys = {
-  name: BigInt('0x' + Buffer.from(sha256('name')).toString('hex')),
-  description: BigInt('0x' + Buffer.from(sha256('description')).toString('hex')),
-  image: BigInt('0x' + Buffer.from(sha256('image')).toString('hex')),
-  image_data: BigInt('0x' + Buffer.from(sha256('image_data')).toString('hex')),
-  symbol: BigInt('0x' + Buffer.from(sha256('symbol')).toString('hex')),
-  decimals: BigInt('0x' + Buffer.from(sha256('decimals')).toString('hex')),
-  uri: BigInt('0x' + Buffer.from(sha256('uri')).toString('hex')),
+export type JettonMetaDataKeys = 'name' | 'description' | 'image' | 'symbol' | 'decimals';
+
+const jettonOnChainMetadataSpec: {
+  [key in JettonMetaDataKeys]: 'utf8' | 'ascii';
+} = {
+  name: 'utf8',
+  description: 'utf8',
+  image: 'ascii',
+  symbol: 'utf8',
+  decimals: 'utf8',
 };
 
-/**
- * Build a snake cell from a buffer
- * Snake format: if data > 127 bytes, split across cells
- */
+function bufferToChunks(buff: Buffer, chunkSize: number): Buffer[] {
+  const chunks: Buffer[] = [];
+  while (buff.length > 0) {
+    chunks.push(buff.slice(0, chunkSize));
+    buff = buff.slice(chunkSize);
+  }
+  return chunks;
+}
+
 function makeSnakeCell(data: Buffer): Cell {
-  const CELL_MAX_SIZE_BYTES = 127;
+  const chunks = bufferToChunks(data, 127);
   
-  if (data.length <= CELL_MAX_SIZE_BYTES) {
-    return beginCell().storeBuffer(data).endCell();
+  if (chunks.length === 0) {
+    return beginCell().endCell();
   }
   
-  // Split into chunks
-  let head = beginCell().storeBuffer(data.slice(0, CELL_MAX_SIZE_BYTES));
-  let tail = data.slice(CELL_MAX_SIZE_BYTES);
-  
-  // Recursively build tail cells
-  if (tail.length > 0) {
-    head.storeRef(makeSnakeCell(tail));
+  if (chunks.length === 1) {
+    return beginCell().storeBuffer(chunks[0]).endCell();
   }
   
-  return head.endCell();
-}
-
-/**
- * Build on-chain content cell value with 0x00 prefix (snake format)
- */
-function buildOnchainValue(value: string): Cell {
-  // On-chain values use snake format with no prefix in the value itself
-  // The dictionary value is: 0x00 (snake prefix) + data
-  const data = Buffer.from(value, 'utf-8');
+  let curCell = beginCell();
   
-  if (data.length <= 126) {
-    // Fits in one cell with prefix
-    return beginCell()
-      .storeUint(0x00, 8) // Snake format prefix
-      .storeBuffer(data)
-      .endCell();
+  for (let i = chunks.length - 1; i >= 0; i--) {
+    const chunk = chunks[i];
+    
+    if (i === chunks.length - 1) {
+      curCell.storeBuffer(chunk);
+    } else {
+      const nextCell = beginCell().storeBuffer(chunk).storeRef(curCell.endCell());
+      curCell = nextCell;
+    }
   }
   
-  // Split into chunks, first chunk is 126 bytes (127 - 1 for prefix)
-  const firstChunk = data.slice(0, 126);
-  const rest = data.slice(126);
-  
-  const builder = beginCell()
-    .storeUint(0x00, 8) // Snake format prefix
-    .storeBuffer(firstChunk);
-  
-  if (rest.length > 0) {
-    builder.storeRef(makeSnakeCell(rest));
-  }
-  
-  return builder.endCell();
-}
-
-export interface JettonOnchainMetadata {
-  name: string;
-  symbol: string;
-  description?: string;
-  image?: string;
-  image_data?: string; // Base64 encoded image data
-  decimals?: number;
+  return curCell.endCell();
 }
 
 /**
  * Build on-chain metadata cell for Jetton (TEP-64)
+ * Matches the format used by minter-contract
  * 
- * Format: 0x00 + Dictionary<SHA256(key), SnakeCell(value)>
+ * Format: 0x00 + Dictionary<SHA256(key), Cell(0x00 + snake_data)>
  */
-export function buildOnchainMetadataCell(metadata: JettonOnchainMetadata): Cell {
-  // Create dictionary with 256-bit keys (SHA256 hashes)
-  const dict = Dictionary.empty(Dictionary.Keys.BigUint(256), Dictionary.Values.Cell());
-  
-  // Add name (required)
-  dict.set(MetadataKeys.name, buildOnchainValue(metadata.name));
-  
-  // Add symbol (required)
-  dict.set(MetadataKeys.symbol, buildOnchainValue(metadata.symbol));
-  
-  // Add description (optional)
-  if (metadata.description) {
-    dict.set(MetadataKeys.description, buildOnchainValue(metadata.description));
-  }
-  
-  // Add image URL (optional)
-  if (metadata.image) {
-    dict.set(MetadataKeys.image, buildOnchainValue(metadata.image));
-  }
-  
-  // Add image_data as base64 (optional) - for on-chain images
-  if (metadata.image_data) {
-    dict.set(MetadataKeys.image_data, buildOnchainValue(metadata.image_data));
-  }
-  
-  // Add decimals (optional, defaults to 9)
-  const decimals = metadata.decimals !== undefined ? metadata.decimals : 9;
-  dict.set(MetadataKeys.decimals, buildOnchainValue(decimals.toString()));
-  
+export function buildOnchainMetadataCell(data: { [s: string]: string | undefined }): Cell {
+  const dict = Dictionary.empty(Dictionary.Keys.Buffer(32), Dictionary.Values.Cell());
+
+  Object.entries(data).forEach(([key, value]) => {
+    if (value === undefined || value === '') return;
+    
+    const encoding = jettonOnChainMetadataSpec[key as JettonMetaDataKeys];
+    if (!encoding) {
+      console.warn(`Unsupported onchain key: ${key}`);
+      return;
+    }
+
+    // Create SHA256 hash of the key
+    const keyHash = Buffer.from(sha256(key));
+    
+    // Encode the value
+    const valueBuffer = Buffer.from(value, encoding);
+    
+    // Build the value cell with snake format (0x00 prefix + data)
+    const CELL_MAX_SIZE_BYTES = 127; // Max bytes per cell (1023 bits / 8 - 1 for prefix)
+    
+    if (valueBuffer.length <= CELL_MAX_SIZE_BYTES - 1) {
+      // Fits in single cell
+      const cell = beginCell()
+        .storeUint(SNAKE_PREFIX, 8)
+        .storeBuffer(valueBuffer)
+        .endCell();
+      dict.set(keyHash, cell);
+    } else {
+      // Need multiple cells - snake format
+      let remaining = valueBuffer;
+      let rootBuilder = beginCell().storeUint(SNAKE_PREFIX, 8);
+      
+      // First chunk (126 bytes max because of prefix)
+      const firstChunkSize = CELL_MAX_SIZE_BYTES - 1;
+      rootBuilder.storeBuffer(remaining.slice(0, firstChunkSize));
+      remaining = remaining.slice(firstChunkSize);
+      
+      // Build chain of cells from the end
+      let tailCell: Cell | null = null;
+      const chunks: Buffer[] = [];
+      while (remaining.length > 0) {
+        chunks.push(remaining.slice(0, CELL_MAX_SIZE_BYTES));
+        remaining = remaining.slice(CELL_MAX_SIZE_BYTES);
+      }
+      
+      // Build from end to start
+      for (let i = chunks.length - 1; i >= 0; i--) {
+        const builder = beginCell().storeBuffer(chunks[i]);
+        if (tailCell) {
+          builder.storeRef(tailCell);
+        }
+        tailCell = builder.endCell();
+      }
+      
+      if (tailCell) {
+        rootBuilder.storeRef(tailCell);
+      }
+      
+      dict.set(keyHash, rootBuilder.endCell());
+    }
+  });
+
   // Build final cell: 0x00 prefix + dictionary
   return beginCell()
     .storeUint(ONCHAIN_CONTENT_PREFIX, 8)
@@ -127,10 +135,31 @@ export function buildOnchainMetadataCell(metadata: JettonOnchainMetadata): Cell 
     .endCell();
 }
 
+export interface JettonMetadata {
+  name: string;
+  symbol: string;
+  description?: string;
+  image?: string;
+  decimals?: number;
+}
+
+/**
+ * Create on-chain content cell from metadata object
+ */
+export function createOnchainContent(metadata: JettonMetadata): Cell {
+  return buildOnchainMetadataCell({
+    name: metadata.name,
+    symbol: metadata.symbol,
+    description: metadata.description,
+    image: metadata.image,
+    decimals: metadata.decimals?.toString(),
+  });
+}
+
 /**
  * Build off-chain metadata cell (URL to JSON)
  * 
- * Format: 0x01 + URL as snake string
+ * Format: 0x01 + URL in snake format
  */
 export function buildOffchainMetadataCell(uri: string): Cell {
   const data = Buffer.from(uri, 'utf-8');
@@ -142,6 +171,7 @@ export function buildOffchainMetadataCell(uri: string): Cell {
       .endCell();
   }
   
+  // For longer URIs, use snake format
   const firstChunk = data.slice(0, 126);
   const rest = data.slice(126);
   
@@ -157,8 +187,8 @@ export function buildOffchainMetadataCell(uri: string): Cell {
 }
 
 /**
- * Build message body for changing metadata URL (Jetton 2.0)
- * Opcode: 0xcb862902
+ * Build message body for changing metadata (Jetton 2.0)
+ * Opcode: 0xcb862902 (change_metadata_url)
  */
 export function buildChangeMetadataMessage(newMetadataCell: Cell): Cell {
   return beginCell()

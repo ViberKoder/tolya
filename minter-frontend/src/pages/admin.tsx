@@ -222,7 +222,7 @@ export default function AdminPage() {
           symbol: newSymbol,
           description: newDescription || undefined,
           image: newImage || undefined,
-          decimals: parseInt(newDecimals) || 9,
+          decimals: newDecimals || '9',
         });
       }
       

@@ -76,11 +76,11 @@ export default function Home() {
       </Head>
 
       <div className="min-h-screen flex flex-col">
-        {/* Background decorations */}
+        {/* Background decorations - more saturated orange gradients */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-1/4 w-[500px] h-[500px] bg-gradient-to-br from-orange-400/20 to-yellow-400/10 rounded-full blur-3xl" />
-          <div className="absolute top-1/3 right-1/4 w-[400px] h-[400px] bg-gradient-to-br from-orange-300/15 to-amber-400/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 left-1/3 w-[450px] h-[450px] bg-gradient-to-br from-yellow-400/10 to-orange-300/15 rounded-full blur-3xl" />
+          <div className="absolute top-20 left-1/4 w-[600px] h-[600px] bg-gradient-to-br from-orange-500/30 to-yellow-500/20 rounded-full blur-3xl" />
+          <div className="absolute top-1/3 right-1/4 w-[500px] h-[500px] bg-gradient-to-br from-orange-400/25 to-amber-500/15 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 left-1/3 w-[550px] h-[550px] bg-gradient-to-br from-yellow-500/20 to-orange-400/25 rounded-full blur-3xl" />
         </div>
 
         <Header />
@@ -89,17 +89,17 @@ export default function Home() {
           {/* Hero Section */}
           <section className="pt-24 pb-12 px-4">
             <div className="max-w-4xl mx-auto text-center">
-              {/* Large Logo */}
-              <div className="mb-6">
+              {/* Large Logo - 2.5x size */}
+              <div className="mb-8">
                 <img 
                   src="https://em-content.zobj.net/source/telegram/386/poultry-leg_1f357.webp" 
                   alt="Cook" 
-                  className="w-24 h-24 mx-auto drop-shadow-lg"
+                  className="w-60 h-60 mx-auto drop-shadow-2xl"
                 />
               </div>
               
               <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight text-cook-text">
-                <span className="gradient-text-cook">Cook</span> your Jetton 2.0
+                <span className="gradient-text-cook">Cook</span> your <span className="gradient-text-jetton">Jetton 2.0</span>
                 <br />on TON
               </h1>
               
