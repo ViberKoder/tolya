@@ -12,6 +12,7 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   tokenSuggestion?: TokenSuggestion;
+  showDeployButton?: boolean;
 }
 
 interface TokenSuggestion {
@@ -19,184 +20,212 @@ interface TokenSuggestion {
   symbol: string;
   description: string;
   totalSupply: string;
-  narrative: string;
+  decimals: number;
+  image?: string;
 }
 
-// AI Response templates for token creation assistance
-const AI_RESPONSES = {
-  greeting: `Hey! 🍗 I'm Cook AI, your token creation assistant!
+// Helper to detect if user wants to deploy
+function wantsToDeployToken(input: string): boolean {
+  const confirmPhrases = [
+    'да', 'yes', 'deploy', 'деплой', 'создай', 'create', 'давай', 'let\'s go', 'отлично', 'perfect',
+    'нравится', 'like it', 'это', 'this one', 'хочу', 'want', 'ok', 'ок', 'да,', 'yes,', 'go', 'делай'
+  ];
+  const lower = input.toLowerCase();
+  return confirmPhrases.some(phrase => lower.includes(phrase));
+}
 
-I can help you with:
-• Brainstorming token names and narratives
-• Designing tokenomics (supply, distribution)
-• Creating compelling token descriptions
-• Suggesting lockup strategies
+// Free AI API call using a public endpoint
+async function callFreeAI(prompt: string): Promise<string> {
+  try {
+    // Using a free AI API - you can replace with any free LLM API
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer gsk_placeholder_use_your_own_key`,
+      },
+      body: JSON.stringify({
+        model: 'mixtral-8x7b-32768',
+        messages: [
+          {
+            role: 'system',
+            content: `You are Cook AI, a friendly token creation assistant for TON blockchain. 
+You help users create Jetton tokens by suggesting names, symbols, descriptions, and tokenomics.
 
-Tell me about your token idea, or ask me anything!`,
+ALWAYS respond in the same language the user writes in.
+When suggesting a token, ALWAYS include this EXACT format (use these exact markers):
 
-  noIdea: `No worries! Let me help you brainstorm. Here are some popular token themes:
+---TOKEN_START---
+Name: [Token Name]
+Symbol: [SYMBOL]
+Description: [Description]
+Supply: [number without commas]
+---TOKEN_END---
 
-🎮 **Gaming** - In-game currencies, NFT ecosystems
-💰 **DeFi** - Yield tokens, governance tokens
-🐕 **Meme** - Community-driven, viral potential
-🌍 **Utility** - Platform tokens, service credits
-🎨 **Creator** - Fan tokens, content monetization
+Be creative, friendly, and helpful. If user asks about tokenomics, explain distribution strategies.
+If user confirms (says "yes", "да", "давай", "create", etc.), generate a final token suggestion.`
+          },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 500,
+      }),
+    });
 
-Which theme interests you? Or describe your project!`,
+    if (!response.ok) {
+      throw new Error('API request failed');
+    }
 
-  tokenomics: `Great question! Here's a solid tokenomics framework:
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || generateFallbackResponse(prompt);
+  } catch (error) {
+    console.log('Using fallback AI response');
+    return generateFallbackResponse(prompt);
+  }
+}
 
-📊 **Supply Distribution:**
-• Team: 10-15% (vested 2-4 years)
+// Fallback AI responses when API is unavailable
+function generateFallbackResponse(input: string): string {
+  const lower = input.toLowerCase();
+
+  // User confirms deployment
+  if (wantsToDeployToken(lower)) {
+    return `Отлично! Вот финальный токен для деплоя:
+
+---TOKEN_START---
+Name: Moon Rocket
+Symbol: MOON
+Description: Community-driven token with deflationary mechanics and rewards for holders
+Supply: 1000000000
+---TOKEN_END---
+
+Нажми кнопку "Deploy it" чтобы создать токен! 🚀`;
+  }
+
+  // Meme token
+  if (lower.includes('meme') || lower.includes('мем') || lower.includes('fun') || lower.includes('смешн')) {
+    return `Мемные токены - отличная идея! 🐸 Вот мое предложение:
+
+---TOKEN_START---
+Name: Super Pepe
+Symbol: SPEPE
+Description: The most based meme token on TON. Community-driven with weekly burns
+Supply: 420690000000
+---TOKEN_END---
+
+Что думаешь? Если нравится, скажи "Да, давай!" или опиши что хочешь изменить.`;
+  }
+
+  // DeFi
+  if (lower.includes('defi') || lower.includes('yield') || lower.includes('finance') || lower.includes('финанс')) {
+    return `DeFi токены сейчас очень актуальны! 💰 Вот моя идея:
+
+---TOKEN_START---
+Name: Yield Master
+Symbol: YLD
+Description: Governance token for decentralized yield optimization protocol on TON
+Supply: 100000000
+---TOKEN_END---
+
+Нравится? Скажи "создай" или расскажи что изменить!`;
+  }
+
+  // Gaming
+  if (lower.includes('game') || lower.includes('игр') || lower.includes('play') || lower.includes('nft')) {
+    return `Игровые токены имеют огромный потенциал! 🎮 Мое предложение:
+
+---TOKEN_START---
+Name: GameVerse Token
+Symbol: GVT
+Description: In-game currency for the GameVerse metaverse with play-to-earn mechanics
+Supply: 5000000000
+---TOKEN_END---
+
+Как тебе? Скажи "да" для деплоя или опиши свою идею!`;
+  }
+
+  // Tokenomics question
+  if (lower.includes('tokenomics') || lower.includes('токеномик') || lower.includes('supply') || lower.includes('распред')) {
+    return `Отличный вопрос о токеномике! 📊
+
+**Рекомендуемое распределение:**
 • Community: 40-50% (airdrops, rewards)
 • Liquidity: 20-30% (DEX pools)
-• Treasury: 10-20% (development, partnerships)
+• Team: 10-15% (vested 2-4 years)
+• Treasury: 10-20% (development)
 
-💡 **Best Practices:**
-• Lock team tokens for at least 1 year
-• Gradual unlocks (cliff + linear vesting)
-• Reserve tokens for future development
+**Советы:**
+• Lock team tokens минимум на 1 год
+• Постепенный unlock (cliff + linear vesting)
+• Резерв для будущего развития
 
-What's your project about? I'll give specific recommendations!`,
-
-  lockups: `Lock-ups are crucial for investor confidence! Here are common strategies:
-
-🔒 **Team Tokens:**
-• 12-month cliff, then 24-month linear vesting
-• Shows long-term commitment
-
-🔒 **Investor Tokens:**
-• 6-month cliff, 18-month vesting
-• Prevents immediate dumps
-
-🔒 **Community:**
-• Staking rewards for locking
-• Governance voting power for locked tokens
-
-Would you like me to suggest a lockup schedule for your token?`,
-};
-
-function generateTokenSuggestion(userInput: string): TokenSuggestion | null {
-  const input = userInput.toLowerCase();
-  
-  // Gaming token
-  if (input.includes('game') || input.includes('gaming') || input.includes('play')) {
-    return {
-      name: 'GameVerse Token',
-      symbol: 'GVT',
-      description: 'The native currency of the GameVerse ecosystem. Used for in-game purchases, rewards, and governance voting.',
-      totalSupply: '1000000000',
-      narrative: 'GameVerse is building the future of blockchain gaming with play-to-earn mechanics and true digital ownership.',
-    };
-  }
-  
-  // Meme token
-  if (input.includes('meme') || input.includes('fun') || input.includes('community')) {
-    return {
-      name: 'Moon Pepe',
-      symbol: 'MPEPE',
-      description: 'The most based meme token on TON. Community-driven with weekly burns and holder rewards.',
-      totalSupply: '420690000000',
-      narrative: 'Born from the dankest corners of the internet. MPEPE is for the culture.',
-    };
-  }
-  
-  // DeFi token
-  if (input.includes('defi') || input.includes('yield') || input.includes('finance')) {
-    return {
-      name: 'Yield Protocol',
-      symbol: 'YLD',
-      description: 'Governance and utility token for Yield Protocol. Stake to earn fees and vote on protocol upgrades.',
-      totalSupply: '100000000',
-      narrative: 'Yield Protocol aims to become the leading DeFi aggregator on TON, offering optimized yields across multiple protocols.',
-    };
-  }
-  
-  // DAO/Governance
-  if (input.includes('dao') || input.includes('governance') || input.includes('vote')) {
-    return {
-      name: 'CommunityDAO',
-      symbol: 'CDAO',
-      description: 'The governance token for CommunityDAO. 1 CDAO = 1 vote on all protocol decisions.',
-      totalSupply: '10000000',
-      narrative: 'CommunityDAO is a decentralized collective building tools and infrastructure for the TON ecosystem.',
-    };
-  }
-  
-  // AI/Tech
-  if (input.includes('ai') || input.includes('tech') || input.includes('artificial')) {
-    return {
-      name: 'Neural Network Token',
-      symbol: 'NNT',
-      description: 'Powering the decentralized AI revolution. Use NNT to access AI models and earn from contributing compute.',
-      totalSupply: '500000000',
-      narrative: 'Neural Network is building a decentralized marketplace for AI models and compute resources on TON.',
-    };
+Расскажи о своем проекте, и я предложу конкретные цифры!`;
   }
 
-  return null;
+  // Help / no idea
+  if (lower.includes('help') || lower.includes('помог') || lower.includes('не знаю') || lower.includes('idea') || lower.includes('идея')) {
+    return `Без проблем, помогу! 💡
+
+Популярные категории токенов:
+🐕 **Meme** - вирусный потенциал, комьюнити
+💰 **DeFi** - yield, governance, utility
+🎮 **Gaming** - play-to-earn, in-game currency
+🎨 **Creator** - fan tokens, content
+🌍 **Utility** - платформенные токены
+
+Просто скажи какая тема тебе ближе или опиши свою идею!`;
+  }
+
+  // Default with token suggestion
+  const names = ['Alpha Token', 'Nova Coin', 'Star Protocol', 'Thunder Token', 'Wave Finance'];
+  const symbols = ['ALPHA', 'NOVA', 'STAR', 'THDR', 'WAVE'];
+  const idx = Math.floor(Math.random() * names.length);
+
+  return `Интересная идея! Вот что я придумал:
+
+---TOKEN_START---
+Name: ${names[idx]}
+Symbol: ${symbols[idx]}
+Description: Next-generation token on TON blockchain with innovative utility
+Supply: 1000000000
+---TOKEN_END---
+
+Нравится? Скажи "да, создай" или расскажи что хочешь изменить!`;
 }
 
-function generateAIResponse(userInput: string, messages: Message[]): { content: string; suggestion?: TokenSuggestion } {
-  const input = userInput.toLowerCase();
+// Parse token suggestion from AI response
+function parseTokenSuggestion(content: string): TokenSuggestion | null {
+  const startMarker = '---TOKEN_START---';
+  const endMarker = '---TOKEN_END---';
   
-  // Check for specific questions
-  if (input.includes('tokenomics') || input.includes('supply') || input.includes('distribution')) {
-    return { content: AI_RESPONSES.tokenomics };
-  }
+  const startIdx = content.indexOf(startMarker);
+  const endIdx = content.indexOf(endMarker);
   
-  if (input.includes('lock') || input.includes('vest') || input.includes('unlock')) {
-    return { content: AI_RESPONSES.lockups };
-  }
+  if (startIdx === -1 || endIdx === -1) return null;
   
-  if (input.includes('no idea') || input.includes('help me') || input.includes('don\'t know') || input.includes('suggest')) {
-    return { content: AI_RESPONSES.noIdea };
-  }
+  const tokenBlock = content.substring(startIdx + startMarker.length, endIdx);
   
-  // Try to generate a token suggestion
-  const suggestion = generateTokenSuggestion(input);
+  const nameMatch = tokenBlock.match(/Name:\s*(.+)/i);
+  const symbolMatch = tokenBlock.match(/Symbol:\s*(\w+)/i);
+  const descMatch = tokenBlock.match(/Description:\s*(.+)/i);
+  const supplyMatch = tokenBlock.match(/Supply:\s*([\d,]+)/i);
   
-  if (suggestion) {
-    return {
-      content: `Based on what you described, here's a token concept I created for you:
-
-🚀 **${suggestion.name} (${suggestion.symbol})**
-
-📝 *Description:*
-${suggestion.description}
-
-💰 *Total Supply:* ${Number(suggestion.totalSupply).toLocaleString()} ${suggestion.symbol}
-
-📖 *Narrative:*
-${suggestion.narrative}
-
-**Suggested Tokenomics:**
-• Community: 45%
-• Liquidity: 25%
-• Team: 15% (2-year vest)
-• Treasury: 15%
-
-Want me to deploy this token? Click the button below, or tell me what you'd like to change!`,
-      suggestion,
-    };
-  }
+  if (!nameMatch || !symbolMatch) return null;
   
-  // Default response
   return {
-    content: `Interesting idea! Let me think about this...
-
-Based on what you shared, I'd recommend focusing on:
-1. **Clear utility** - What problem does your token solve?
-2. **Strong narrative** - Why should people care?
-3. **Fair distribution** - Build community trust
-
-Could you tell me more about:
-- What's the main use case?
-- Who's your target audience?
-- Any specific tokenomics in mind?
-
-I'll create a detailed token concept once I understand better!`,
+    name: nameMatch[1].trim(),
+    symbol: symbolMatch[1].trim().toUpperCase(),
+    description: descMatch ? descMatch[1].trim() : `${nameMatch[1].trim()} token on TON`,
+    totalSupply: supplyMatch ? supplyMatch[1].replace(/,/g, '') : '1000000000',
+    decimals: 9,
   };
+}
+
+// Format response for display (remove markers)
+function formatResponseForDisplay(content: string): string {
+  return content
+    .replace(/---TOKEN_START---/g, '📦 **Token:**')
+    .replace(/---TOKEN_END---/g, '');
 }
 
 export default function AIPage() {
@@ -205,12 +234,21 @@ export default function AIPage() {
     {
       id: '1',
       role: 'assistant',
-      content: AI_RESPONSES.greeting,
+      content: `Привет! 🍗 Я Cook AI - твой помощник в создании токенов!
+
+Я могу помочь с:
+• Придумать название и нарратив токена
+• Разработать токеномику
+• Создать описание
+• Предложить стратегии lockup
+
+Просто расскажи о своей идее или напиши "помоги" если не знаешь с чего начать!`,
     },
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
+  const [lastSuggestion, setLastSuggestion] = useState<TokenSuggestion | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -231,28 +269,44 @@ export default function AIPage() {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const userInput = input.trim();
     setInput('');
     setIsLoading(true);
 
-    // Simulate AI thinking delay
-    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
+    try {
+      // Call AI
+      const aiResponse = await callFreeAI(userInput);
+      
+      // Parse token suggestion
+      const suggestion = parseTokenSuggestion(aiResponse);
+      if (suggestion) {
+        setLastSuggestion(suggestion);
+      }
 
-    const response = generateAIResponse(input, messages);
+      // Check if user confirms deployment
+      const hasLastSuggestion = suggestion !== null || lastSuggestion !== null;
+      const showDeploy = wantsToDeployToken(userInput) && hasLastSuggestion;
+      const tokenToShow = suggestion || (showDeploy ? lastSuggestion : null);
 
-    const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      role: 'assistant',
-      content: response.content,
-      tokenSuggestion: response.suggestion,
-    };
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: formatResponseForDisplay(aiResponse),
+        tokenSuggestion: tokenToShow || undefined,
+        showDeployButton: showDeploy || suggestion !== null,
+      };
 
-    setMessages(prev => [...prev, assistantMessage]);
-    setIsLoading(false);
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (err) {
+      console.error('AI error:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDeploy = async (suggestion: TokenSuggestion) => {
     if (!connected || !wallet) {
-      toast.error('Please connect your wallet first');
+      toast.error('Сначала подключи кошелек');
       return;
     }
 
@@ -263,8 +317,8 @@ export default function AIPage() {
         name: suggestion.name,
         symbol: suggestion.symbol,
         description: suggestion.description,
-        image: '',
-        decimals: 9,
+        image: suggestion.image || '',
+        decimals: suggestion.decimals,
         totalSupply: suggestion.totalSupply,
         mintable: true,
       };
@@ -280,27 +334,26 @@ export default function AIPage() {
         setMessages(prev => [...prev, {
           id: Date.now().toString(),
           role: 'assistant',
-          content: `🎉 **Token deployed successfully!**
+          content: `🎉 **Токен создан!**
 
-Your **${suggestion.name} (${suggestion.symbol})** is now live on TON!
+**${suggestion.name} (${suggestion.symbol})** теперь на TON!
 
-📋 **Contract Address:**
-\`${result.address}\`
+📋 Адрес: \`${result.address}\`
 
-🔗 [View on TonViewer](https://tonviewer.com/${result.address})
+🔗 [Открыть на TonViewer](https://tonviewer.com/${result.address})
 
-Next steps:
-1. Add liquidity on DeDust or STON.fi
-2. Share with your community
-3. Build and grow!
+Что дальше:
+1. Добавь ликвидность на DeDust или STON.fi
+2. Поделись адресом с комьюнити
+3. Начни строить! 🚀
 
-Need help with anything else?`,
+Нужна еще помощь?`,
         }]);
       } else {
-        throw new Error(result.error || 'Deployment failed');
+        throw new Error(result.error || 'Ошибка деплоя');
       }
     } catch (err: any) {
-      toast.error(err.message || 'Failed to deploy token');
+      toast.error(err.message || 'Не удалось создать токен');
     } finally {
       setIsDeploying(false);
     }
@@ -316,7 +369,7 @@ Need help with anything else?`,
   return (
     <>
       <Head>
-        <title>AI Chat | Cook - Token Creation Assistant</title>
+        <title>Cook AI | Помощник создания токенов</title>
         <link rel="icon" href="https://em-content.zobj.net/source/telegram/386/robot_1f916.webp" />
       </Head>
 
@@ -339,7 +392,7 @@ Need help with anything else?`,
               <h1 className="text-3xl font-bold text-gray-800 mb-2">
                 Cook <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">AI</span>
               </h1>
-              <p className="text-gray-600">Your token creation assistant</p>
+              <p className="text-gray-600">Придумаю токен, помогу с токеномикой</p>
             </div>
 
             {/* Chat Container */}
@@ -352,41 +405,46 @@ Need help with anything else?`,
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                      className={`max-w-[85%] rounded-2xl px-4 py-3 ${
                         message.role === 'user'
                           ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
                           : 'bg-gray-100 text-gray-800'
                       }`}
                     >
-                      <div className="whitespace-pre-wrap text-sm">
-                        {message.content.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`)/g).map((part, i) => {
+                      <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                        {message.content.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`|\[.*?\]\(.*?\))/g).map((part, i) => {
                           if (part.startsWith('**') && part.endsWith('**')) {
                             return <strong key={i}>{part.slice(2, -2)}</strong>;
                           } else if (part.startsWith('*') && part.endsWith('*')) {
                             return <em key={i}>{part.slice(1, -1)}</em>;
                           } else if (part.startsWith('`') && part.endsWith('`')) {
-                            return <code key={i} className="bg-black/10 px-1 rounded text-xs">{part.slice(1, -1)}</code>;
+                            return <code key={i} className="bg-black/10 px-1.5 py-0.5 rounded text-xs font-mono break-all">{part.slice(1, -1)}</code>;
+                          } else if (part.match(/\[.*?\]\(.*?\)/)) {
+                            const match = part.match(/\[(.*?)\]\((.*?)\)/);
+                            if (match) {
+                              return <a key={i} href={match[2]} target="_blank" className="text-purple-600 underline">{match[1]}</a>;
+                            }
                           }
                           return part;
                         })}
                       </div>
                       
-                      {/* Deploy button for token suggestions */}
-                      {message.tokenSuggestion && (
+                      {/* Deploy button */}
+                      {message.showDeployButton && message.tokenSuggestion && (
                         <button
                           onClick={() => handleDeploy(message.tokenSuggestion!)}
                           disabled={!connected || isDeploying}
-                          className="mt-4 w-full py-2 px-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                          className="mt-4 w-full py-3 px-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold text-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                           {isDeploying ? (
-                            <span className="flex items-center justify-center gap-2">
-                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              Deploying...
-                            </span>
+                            <>
+                              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              Создаем...
+                            </>
                           ) : !connected ? (
-                            'Connect Wallet to Deploy'
+                            '🔗 Подключи кошелек'
                           ) : (
-                            `🚀 Deploy ${message.tokenSuggestion.symbol}`
+                            <>🚀 Deploy it!</>
                           )}
                         </button>
                       )}
@@ -397,7 +455,7 @@ Need help with anything else?`,
                 {isLoading && (
                   <div className="flex justify-start">
                     <div className="bg-gray-100 rounded-2xl px-4 py-3">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                         <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                         <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
@@ -417,7 +475,7 @@ Need help with anything else?`,
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="Describe your token idea..."
+                    placeholder="Опиши свою идею токена..."
                     className="flex-grow px-4 py-3 bg-gray-50 border border-purple-200 rounded-xl focus:outline-none focus:border-purple-500 transition-colors"
                     disabled={isLoading}
                   />
@@ -426,11 +484,11 @@ Need help with anything else?`,
                     disabled={!input.trim() || isLoading}
                     className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
                   >
-                    Send
+                    Отправить
                   </button>
                 </div>
                 <p className="text-xs text-gray-400 mt-2 text-center">
-                  Try: &quot;I want to create a meme token&quot; or &quot;Help me with tokenomics&quot;
+                  Попробуй: &quot;Хочу создать мем токен&quot; или &quot;Помоги с токеномикой&quot;
                 </p>
               </div>
             </div>

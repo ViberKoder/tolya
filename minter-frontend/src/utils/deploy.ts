@@ -11,28 +11,32 @@ const MONETIZATION_FEE = toNano('0.8');
 export const TOTAL_DEPLOY_COST = toNano('1');
 
 // ============================================================================
-// JETTON CONTRACTS with On-chain Metadata Support
-// Based on https://github.com/ton-blockchain/minter-contract
+// JETTON 2.0 CONTRACTS with ON-CHAIN Metadata Support
+// Based on https://github.com/ton-blockchain/jetton-contract/tree/jetton-2.0
+// Modified to store TEP-64 on-chain metadata directly (like minter-contract)
 // Compiled using func-js v0.4.6
 // ============================================================================
 
-// Jetton Minter code (from minter-contract - supports on-chain metadata)
-const JETTON_MINTER_CODE_BASE64 = 'te6ccgECDQEAApwAART/APSkE/S88sgLAQIBYgIDAgLMBAUCA3pgCwwC8dkGOASS+B8ADoaYGAuNhJL4HwfSB9IBj9ABi465D9ABj9ABgBaY/pn/aiaH0AfSBqahhACqk4XUcZmpqbGyiaY4L5cCSBfSB9AGoYEGhAMGuQ/QAYEogaKCF4BQpQKBnkKAJ9ASxni2ZmZPaqcEEIPe7L7yk4XXGBQGBwCTtfBQiAbgqEAmqCgHkKAJ9ASxniwDni2ZkkWRlgIl6AHoAZYBkkHyAODpkZYFlA+X/5Og7wAxkZYKsZ4soAn0BCeW1iWZmZLj9gEBwDY3NwH6APpA+ChUEgZwVCATVBQDyFAE+gJYzxYBzxbMySLIywES9AD0AMsAyfkAcHTIywLKB8v/ydBQBscF8uBKoQNFRchQBPoCWM8WzMzJ7VQB+kAwINcLAcMAkVvjDQgBpoIQLHa5c1JwuuMCNTc3I8ADjhozUDXHBfLgSQP6QDBZyFAE+gJYzxbMzMntVOA1AsAEjhhRJMcF8uBJ1DBDAMhQBPoCWM8WzMzJ7VTgXwWED/LwCQA+ghDVMnbbcIAQyMsFUAPPFiL6AhLLassfyz/JgEL7AAH+Nl8DggiYloAVoBW88uBLAvpA0wAwlcghzxbJkW3ighDRc1QAcIAYyMsFUAXPFiT6AhTLahPLHxTLPyP6RDBwuo4z+ChEA3BUIBNUFAPIUAT6AljPFgHPFszJIsjLARL0APQAywDJ+QBwdMjLAsoHy//J0M8WlmwicAHLAeL0AAoACsmAQPsAAH2tvPaiaH0AfSBqahg2GPwUALgqEAmqCgHkKAJ9ASxniwDni2ZkkWRlgIl6AHoAZYBk/IA4OmRlgWUD5f/k6EAAH68W9qJofQB9IGpqGD+qkEA=';
+// Jetton Minter with on-chain metadata (Jetton 2.0 + TEP-64)
+const JETTON_MINTER_CODE_BASE64 = 'te6ccgECEwEABG0AART/APSkE/S88sgLAQIBYgIDAvjQMtDTAwFxsMABjjswgCDXIdMfAYIQF41FGbqRMOGAQNch+gAw7UTQ+gD6QPpA1NTRUEWhQTTIUAX6AlADzxYBzxbMzMntVOD6QPpAMfoAMfQB+gAx+gABMXD4OgLTHwEB0z8BEu1E0PoA+kD6QNTU0SaCEGQrfQe64wI5BAUCASAPEAGWNTVRYccF8uBJBPpAIfpEMMAA8uFN+gDU0SDQ0x8BghAXjUUZuvLgSIBA1yH6APpAMfpAMfoAINcLAJrXS8ABAcABsPKxkTDiVEMbBgTmJYIQe92X3rrjAiWCECx2uXO6jss1XwM0AfpA0gABAdGVyCHPFsmRbeLIgBABywVQBM8WcPoCcAHLaoIQ0XNUAAHLH1AEAcs/I/pEMMAAlzFsEnABywHjDfQAyYBQ+wDgNCSCEGUB81S64wIkghD7iOEZugkKCwwBjiGRcpFx4vg5IG6TgSObkSDiIW6UMYEoMJEB4lAjqBOgc4EDLHD4PKACcPg2EqABcPg2oHOBBAKCEAlmAYBw+DegvPKwJVl/BwHqggiYloBw+wIkgAvXIdcLB/goRgVwVCATFMhQA/oCAc8WAc8WySJ4ccjLAMsEywAS9AD0AMsAyVEzhPcB+QABsHB0yMsCygcSywfL98nQyIAYAcsFAc8WWPoCA5d3UAPLa8zMljFxWMtqzOLJgBH7AFAFoEMUCAAiyFAF+gJQA88WAc8WzMzJ7VQB8jUF+gD6QPgoVBIHIoAL1yHXCwdVIHBUIBMUyFAD+gIBzxYBzxbJInhxyMsAywTLABL0APQAywDJhPcB+QABsHB0yMsCygcSywfL98nQUAjHBfLgShKhRBRQNshQBfoCUAPPFgHPFszMye1U+kDRINcLAcAAs5Fb4w0NAJL4KEQEIoAL1yHXCwdVIHBUIBMUyFAD+gIBzxYBzxbJInhxyMsAywTLABL0APQAywDJhPcB+QABsHB0yMsCygcSywfL98nQEs8WAEIwM1FCxwXy4EkC+kDRQAMEyFAF+gJQA88WAc8WzMzJ7VQB/o4gMTMD0VExxwXy4EmLAkA0yFAF+gJQA88WAc8WzMzJ7VTgJIIQdDHyIbqOIjAzUELHBfLgSQHRiwKLAkA0yFAF+gJQA88WAc8WzMzJ7VTgNyPABI4fM1FCxwXy4EkC1NETREDIUAX6AlADzxYBzxbMzMntVOA2WyCCECUI1moOAETIgBABywUBzxZw+gJwActqghDVMnbbAcsfAQHLP8mAQvsAAEC6nzACxwXy4EnU1NEB7VT7BOBsMYIQ03IVjLrchA/y8AAlvZrfaiaH0AfSB9IGpqaIgSL4JAICcRESAK2tvPaiaH0AfSB9IGpqaIovgnwUAJFABeuQ64WDqpA4KhAJimQoAf0BAOeLAOeLZJE8OORlgGWCZYAJegB6AGWAZMJ7gPyAANg4OmRlgWUDiWWD5fvk6EAAJa8W9qJofQB9IH0gampomT+qkEA=';
 
-// Jetton Wallet code (from minter-contract)
-const JETTON_WALLET_CODE_BASE64 = 'te6ccgECEQEAAyMAART/APSkE/S88sgLAQIBYgIDAgLMBAUAG6D2BdqJofQB9IH0gahhAgHUBgcCASAICQDDCDHAJJfBOAB0NMDAXGwlRNfA/AM4PpA+kAx+gAxcdch+gAx+gAwc6m0AALTH4IQD4p+pVIgupUxNFnwCeCCEBeNRRlSILqWMUREA/AK4DWCEFlfB7y6k1nwC+BfBIQP8vCAAET6RDBwuvLhTYAIBIAoLAIPUAQa5D2omh9AH0gfSBqGAJpj8EIC8aijKkQXUEIPe7L7wndCVj5cWLpn5j9ABgJ0CgR5CgCfQEsZ4sA54tmZPaqQB8VA9M/+gD6QCHwAe1E0PoA+kD6QNQwUTahUirHBfLiwSjC//LiwlQ0QnBUIBNUFAPIUAT6AljPFgHPFszJIsjLARL0APQAywDJIPkAcHTIywLKB8v/ydAE+kD0BDH6ACDXScIA8uLEd4AYyMsFUAjPFnD6AhfLaxPMgMAgEgDQ4AnoIQF41FGcjLHxnLP1AH+gIizxZQBs8WJfoCUAPPFslQBcwjkXKRceJQCKgToIIJycOAoBS88uLFBMmAQPsAECPIUAT6AljPFgHPFszJ7VQC9ztRND6APpA+kDUMAjTP/oAUVGgBfpA+kBTW8cFVHNtcFQgE1QUA8hQBPoCWM8WAc8WzMkiyMsBEvQA9ADLAMn5AHB0yMsCygfL/8nQUA3HBRyx8uLDCvoAUaihggiYloBmtgihggiYloCgGKEnlxBJEDg3XwTjDSXXCwGAPEADXO1E0PoA+kD6QNQwB9M/+gD6QDBRUaFSSccF8uLBJ8L/8uLCBYIJMS0AoBa88uLDghB73ZfeyMsfFcs/UAP6AiLPFgHPFslxgBjIywUkzxZw+gLLaszJgED7AEATyFAE+gJYzxYBzxbMye1UgAHBSeaAYoYIQc2LQnMjLH1Iwyz9Y+gJQB88WUAfPFslxgBDIywUkzxZQBvoCFctqFMzJcfsAECQQIwB8wwAjwgCwjiGCENUydttwgBDIywVQCM8WUAT6AhbLahLLHxLLP8ly+wCTNWwh4gPIUAT6AljPFgHPFszJ7VQ=';
+// Jetton Wallet (Jetton 2.0)
+const JETTON_WALLET_CODE_BASE64 = 'te6ccgECDQEAA4oAART/APSkE/S88sgLAQIBYgIDAvTQAdDTAwFxsMABjkMTXwOAINch7UTQ+gD6QPpA0QPTHwGEDyGCEBeNRRm6AoIQe92X3roSsfL0gEDXIfoAMBKgAshQA/oCAc8WAc8Wye1U4PpA+kAx+gAx9AH6ADH6AAExcPg6AtMfASCCEA+KfqW6joUwNFnbPOAzIgQFAB2g9gXaiaH0AfSB9IGj8FUB9APTPwEB+gD6QCH6RDDAAPLhTe1E0PoA+kD6QNFSGccF8uBJURShIML/8q8jgAvXIdcLB/gqVCWQcFQgExTIUAP6AgHPFgHPFskieHHIywDLBMsAEvQA9ADLAMlRRIT3AfkAAbBwdMjLAsoHEssHy/fJ0AP6QPQB+gAgBgJaghAXjUUZuo6EMlrbPOA0IYIQWV8HvLqOhDEB2zzgE18DghDTchWMutyED/LwCAkBliDXCwCa10vAAQHAAbDysZEw4siCEBeNRRkByx9QCQHLP1AH+gIjzxYBzxYl+gJQBs8WyciAGAHLBVADzxZw+gJad1ADy2vMzMlERgcAsCGRcpFx4vg5IG6TgSObkSDiIW6UMYEoMJEB4lAjqBOgc4EDLHD4PKACcPg2EqABcPg2oHOBBAKCEAlmAYBw+DegvPKwA4BQ+wAByFAD+gIBzxYBzxbJ7VQC9O1E0PoA+kD6QNEG0z8BAfoA+kD6QFOpxwWzjk74KlRjwCKAC9ch1wsHVSBwVCATFMhQA/oCAc8WAc8WySJ4ccjLAMsEywAS9AD0AMsAyYT3AfkAAbBwdMjLAsoHEssHy/fJ0FAKxwXy4EqROeJRUqAI+gAhkl8E4w0iCgsB7u1E0PoA+kD6QNEF0z8BAfoA+kD0AdFRQaFSN8cF8uBJJcL/8q/IghB73ZfeAcsfWAHLPwH6AiHPFljPFsnIgBgBywUlzxZw+gIBcVjLaszJAvg5IG6UMIEWDd5xgQLycPg4AXD4NqCBG99w+DagvPKwAYBQ+wBYDABgyIIQc2LQnAHLHyUByz9QBPoCWM8WWM8WyciAEAHLBSTPFlj6AgFxWMtqzMmAEfsAAK7XCwHAALOOO1BDofgvoHOBBAKCEAlmAYBw+De2CXL7AsiAEAHLBQHPFnD6AnABy2qCENUydtsByx8BAcs/yYEAgvsAkxRfBOJYyFAD+gIBzxYBzxbJ7VQAHMhQA/oCAc8WAc8Wye1U';
 
-// Operation codes
+// Operation codes (Jetton 2.0)
 export const Op = {
   transfer: 0xf8a7ea5,
   internal_transfer: 0x178d4519,
   burn: 0x595f07bc,
   burn_notification: 0x7bdd97de,
-  mint: 21,
-  change_admin: 3,
-  change_content: 4,
+  mint: 0x642b7d07,
+  change_admin: 0x6501f354,
+  claim_admin: 0xfb88e119,
+  drop_admin: 0x7431f221,
+  change_content: 4, // TEP-64 on-chain content change
   provide_wallet_address: 0x2c76b973,
   take_wallet_address: 0xd1735400,
+  top_up: 0xd372158c,
   excesses: 0xd53276db,
 };
 
@@ -53,9 +57,11 @@ interface DeployResult {
 // ============================================================================
 // TEP-64 On-chain Metadata Builder
 // Based on https://github.com/ton-blockchain/minter-contract
+// Format: 0x00 + Dictionary<SHA256(key), Cell(0x00 + snake_data)>
 // ============================================================================
 
 const ONCHAIN_CONTENT_PREFIX = 0x00;
+const OFFCHAIN_CONTENT_PREFIX = 0x01;
 const SNAKE_PREFIX = 0x00;
 
 type JettonMetaDataKeys = 'name' | 'description' | 'image' | 'symbol' | 'decimals';
@@ -69,10 +75,10 @@ const jettonOnChainMetadataSpec: { [key in JettonMetaDataKeys]: 'utf8' | 'ascii'
 };
 
 /**
- * Build on-chain metadata cell for Jetton (TEP-64)
- * Exactly matches the format used by minter-contract
+ * Build TEP-64 on-chain metadata cell
+ * Exactly matches minter-contract format
  */
-function buildOnchainMetadataCell(data: { [s: string]: string | undefined }): Cell {
+export function buildOnchainMetadataCell(data: { [s: string]: string | undefined }): Cell {
   const dict = Dictionary.empty(Dictionary.Keys.Buffer(32), Dictionary.Values.Cell());
 
   Object.entries(data).forEach(([key, value]) => {
@@ -81,24 +87,24 @@ function buildOnchainMetadataCell(data: { [s: string]: string | undefined }): Ce
     const encoding = jettonOnChainMetadataSpec[key as JettonMetaDataKeys];
     if (!encoding) return;
 
-    // Create SHA256 hash of the key
+    // SHA256 hash of the key
     const keyHash = Buffer.from(sha256(key));
     
-    // Encode the value
+    // Encode value
     const valueBuffer = Buffer.from(value, encoding);
     
-    // Build the value cell with snake format (0x00 prefix + data)
+    // Build value cell with snake format (0x00 prefix + data)
     const CELL_MAX_SIZE_BYTES = 127;
     
     if (valueBuffer.length <= CELL_MAX_SIZE_BYTES - 1) {
-      // Fits in single cell
+      // Single cell
       const cell = beginCell()
         .storeUint(SNAKE_PREFIX, 8)
         .storeBuffer(valueBuffer)
         .endCell();
       dict.set(keyHash, cell);
     } else {
-      // Need multiple cells - snake format
+      // Multi-cell snake format
       let remaining = valueBuffer;
       let rootBuilder = beginCell().storeUint(SNAKE_PREFIX, 8);
       
@@ -129,7 +135,7 @@ function buildOnchainMetadataCell(data: { [s: string]: string | undefined }): Ce
     }
   });
 
-  // Build final cell: 0x00 prefix + dictionary
+  // Final cell: 0x00 prefix + dictionary
   return beginCell()
     .storeUint(ONCHAIN_CONTENT_PREFIX, 8)
     .storeDict(dict)
@@ -137,11 +143,11 @@ function buildOnchainMetadataCell(data: { [s: string]: string | undefined }): Ce
 }
 
 /**
- * Build off-chain metadata cell (URL to JSON)
+ * Build off-chain metadata cell (URL)
  */
-function buildOffchainMetadataCell(uri: string): Cell {
+export function buildOffchainMetadataCell(uri: string): Cell {
   return beginCell()
-    .storeUint(0x01, 8) // Off-chain prefix
+    .storeUint(OFFCHAIN_CONTENT_PREFIX, 8)
     .storeStringTail(uri)
     .endCell();
 }
@@ -153,17 +159,17 @@ export async function deployJettonMinter(
   sendMultipleMessages?: (messages: TransactionMessage[]) => Promise<any>
 ): Promise<DeployResult> {
   try {
-    toast.loading('Preparing Jetton contract...', { id: 'deploy' });
+    toast.loading('Preparing Jetton 2.0 contract...', { id: 'deploy' });
 
     let contentCell: Cell;
 
-    // Check if user provided an off-chain metadata URL
+    // Use off-chain URL if provided, otherwise build on-chain metadata
     if (tokenData.metadataUrl && tokenData.metadataUrl.trim()) {
       console.log('Using off-chain metadata URL:', tokenData.metadataUrl);
       contentCell = buildOffchainMetadataCell(tokenData.metadataUrl.trim());
     } else {
-      // Use on-chain metadata (TEP-64) - minter-contract style
-      console.log('Building on-chain metadata...');
+      // Build TEP-64 on-chain metadata
+      console.log('Building on-chain metadata (TEP-64)...');
       contentCell = buildOnchainMetadataCell({
         name: tokenData.name,
         symbol: tokenData.symbol.toUpperCase(),
@@ -173,16 +179,17 @@ export async function deployJettonMinter(
       });
     }
 
-    // Calculate total supply with decimals
+    // Total supply with decimals
     const supplyWithDecimals = BigInt(tokenData.totalSupply) * BigInt(10 ** tokenData.decimals);
 
-    // Build initial data for minter-contract style Jetton
-    // Structure: total_supply, admin_address, content, jetton_wallet_code
+    // Jetton 2.0 data structure:
+    // total_supply, admin_address, next_admin_address, wallet_code, content
     const minterData = beginCell()
-      .storeCoins(0) // total_supply starts at 0
+      .storeCoins(0) // total_supply (will be updated after mint)
       .storeAddress(walletAddress) // admin_address
-      .storeRef(contentCell) // content (TEP-64 on-chain or off-chain)
+      .storeAddress(null) // next_admin_address
       .storeRef(JETTON_WALLET_CODE) // jetton_wallet_code
+      .storeRef(contentCell) // content (TEP-64)
       .endCell();
 
     // Create StateInit
@@ -194,7 +201,7 @@ export async function deployJettonMinter(
     // Calculate contract address
     const minterAddress = contractAddress(0, stateInit);
     
-    console.log('Deploying Jetton to:', minterAddress.toString());
+    console.log('Deploying Jetton 2.0 to:', minterAddress.toString());
     console.log('Admin:', walletAddress.toString());
     console.log('Token:', tokenData.name, tokenData.symbol);
 
@@ -203,7 +210,7 @@ export async function deployJettonMinter(
       .store(storeStateInit(stateInit))
       .endCell();
 
-    // Build mint message (op::mint = 21 for minter-contract)
+    // Build mint message (Jetton 2.0 opcode)
     const internalTransferMsg = beginCell()
       .storeUint(Op.internal_transfer, 32)
       .storeUint(0, 64) // query_id
@@ -215,7 +222,7 @@ export async function deployJettonMinter(
       .endCell();
 
     const mintBody = beginCell()
-      .storeUint(Op.mint, 32) // op = 21 (mint)
+      .storeUint(Op.mint, 32)
       .storeUint(0, 64) // query_id
       .storeAddress(walletAddress) // to_address
       .storeCoins(toNano('0.1')) // amount for wallet deployment
@@ -251,7 +258,7 @@ export async function deployJettonMinter(
     }
     
     if (result) {
-      toast.success('Jetton token created successfully!', { id: 'deploy' });
+      toast.success('Jetton 2.0 token created!', { id: 'deploy' });
       return { success: true, address: minterAddress.toString() };
     } else {
       throw new Error('Transaction rejected');

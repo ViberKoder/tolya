@@ -89,12 +89,12 @@ export default function Home() {
           {/* Hero Section */}
           <section className="pt-24 pb-12 px-4">
             <div className="max-w-4xl mx-auto text-center">
-              {/* Large Logo - 2.5x size */}
+              {/* Large Logo - 2.5x size with GIF */}
               <div className="mb-8">
                 <img 
-                  src="https://em-content.zobj.net/source/telegram/386/poultry-leg_1f357.webp" 
+                  src="https://s4.ezgif.com/tmp/ezgif-4da3f36d99291476.gif" 
                   alt="Cook" 
-                  className="w-60 h-60 mx-auto drop-shadow-2xl"
+                  className="w-60 h-60 mx-auto drop-shadow-2xl rounded-3xl"
                 />
               </div>
               
