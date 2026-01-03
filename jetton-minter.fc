@@ -33,12 +33,12 @@ cell create_jetton_content() inline {
     ;; URI метаданных (ключ 0 в словаре) - указывает на JSON файл с метаданными
     ;; Префикс 0x01 означает off-chain URI (Semi-chain metadata)
     builder uri_builder = begin_cell();
-    uri_builder = uri_builder.store_uint(1, 8); ;; off-chain URI prefix (0x01)
+    uri_builder = uri_builder.store_uint(1, 8); ;; off-chain URI prefix (0x01) для Semi-chain metadata
     uri_builder = uri_builder.store_slice("https://raw.githubusercontent.com/ViberKoder/tolya/cursor/token-monetization-and-moderation-1e9c/metadata.json");
     cell uri_cell = uri_builder.end_cell();
     
     ;; Создаем словарь (dict) с ключом 0 (URI метаданных)
-    ;; В Semi-chain формате достаточно хранить только URI
+    ;; В Semi-chain формате достаточно хранить только URI в ключе 0
     cell dict = null();
     dict = dict_set(dict, 0, uri_cell);
     
@@ -185,13 +185,17 @@ cell calculate_user_jetton_wallet_init(int workchain, slice owner_address, slice
         .end_cell();
 }
 
-(int, int, cell, int) get_jetton_data() method_id {
+(int, int, slice, cell, cell) get_jetton_data() method_id {
     var (admin_address, total_supply, jetton_content, mintable) = load_data();
+    ;; В Jetton 2.0 wallet_code можно получить из кода контракта wallet
+    ;; Для упрощения возвращаем пустую ячейку, так как wallet_code можно получить из кода
+    cell wallet_code = null();
     return (
         total_supply,
         mintable,
+        admin_address,
         jetton_content,
-        -1
+        wallet_code
     );
 }
 
