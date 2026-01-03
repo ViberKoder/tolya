@@ -26,47 +26,21 @@
     set_data(b.end_cell());
 }
 
-;; Функция для создания метаданных токена (встроена в контракт)
-;; Метаданные хранятся в формате snake_data в словаре
+;; Функция для создания метаданных токена (Semi-chain metadata)
+;; В Semi-chain формате в блокчейне хранится только URI, а метаданные хранятся офчейн
+;; В TEP-64 для Semi-chain используется префикс 0x01 для off-chain URI
 cell create_jetton_content() inline {
-    ;; name: "tolya" (ключ 0 в словаре)
-    builder name_builder = begin_cell();
-    name_builder = name_builder.store_uint(0, 8); ;; snake_data prefix
-    name_builder = name_builder.store_slice("tolya");
-    cell name_cell = name_builder.end_cell();
+    ;; URI метаданных (ключ 0 в словаре) - указывает на JSON файл с метаданными
+    ;; Префикс 0x01 означает off-chain URI (Semi-chain metadata)
+    builder uri_builder = begin_cell();
+    uri_builder = uri_builder.store_uint(1, 8); ;; off-chain URI prefix (0x01)
+    uri_builder = uri_builder.store_slice("https://raw.githubusercontent.com/ViberKoder/tolya/cursor/token-monetization-and-moderation-1e9c/metadata.json");
+    cell uri_cell = uri_builder.end_cell();
     
-    ;; description: "tolya" (ключ 1)
-    builder desc_builder = begin_cell();
-    desc_builder = desc_builder.store_uint(0, 8); ;; snake_data prefix
-    desc_builder = desc_builder.store_slice("tolya");
-    cell desc_cell = desc_builder.end_cell();
-    
-    ;; image: URL (ключ 2)
-    builder image_builder = begin_cell();
-    image_builder = image_builder.store_uint(0, 8); ;; snake_data prefix
-    image_builder = image_builder.store_slice("https://cache.tonapi.io/imgproxy/QOtsjsEA_bkTPXbfkNlSy4EFhmpad0q0Xb_4dN7ZzyU/rs:fill:500:500:1/g:no/aHR0cHM6Ly9jYWNoZS50b25hcGkuaW8vZG5zL3ByZXZpZXcvdG9seWEudG9uLnBuZw.webp");
-    cell image_cell = image_builder.end_cell();
-    
-    ;; symbol: "tol" (ключ 3)
-    builder symbol_builder = begin_cell();
-    symbol_builder = symbol_builder.store_uint(0, 8); ;; snake_data prefix
-    symbol_builder = symbol_builder.store_slice("tol");
-    cell symbol_cell = symbol_builder.end_cell();
-    
-    ;; decimals: 9 (ключ 4)
-    builder decimals_builder = begin_cell();
-    decimals_builder = decimals_builder.store_uint(0, 8); ;; snake_data prefix
-    decimals_builder = decimals_builder.store_uint(9, 8);
-    cell decimals_cell = decimals_builder.end_cell();
-    
-    ;; Создаем словарь (dict) с ключами 0-4 используя правильный синтаксис FunC
-    cell empty_dict = null();
-    cell dict = empty_dict;
-    dict~dict_set(0, name_cell);
-    dict~dict_set(1, desc_cell);
-    dict~dict_set(2, image_cell);
-    dict~dict_set(3, symbol_cell);
-    dict~dict_set(4, decimals_cell);
+    ;; Создаем словарь (dict) с ключом 0 (URI метаданных)
+    ;; В Semi-chain формате достаточно хранить только URI
+    cell dict = null();
+    dict = dict_set(dict, 0, uri_cell);
     
     return dict;
 }
