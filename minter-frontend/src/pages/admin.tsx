@@ -5,7 +5,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useTonConnect } from '@/hooks/useTonConnect';
 import { Address, toNano, beginCell } from '@ton/core';
-import { buildOnchainMetadataCell, buildOffchainMetadataCell, buildChangeMetadataMessage } from '@/utils/onchain-metadata';
+import { buildOnchainMetadataCell, buildChangeMetadataMessage } from '@/utils/onchain-metadata';
 import toast from 'react-hot-toast';
 
 interface JettonInfo {
@@ -46,8 +46,6 @@ export default function AdminPage() {
   const [newDescription, setNewDescription] = useState('');
   const [newImage, setNewImage] = useState('');
   const [newDecimals, setNewDecimals] = useState('9');
-  const [useOffchainUrl, setUseOffchainUrl] = useState(false);
-  const [offchainUrl, setOffchainUrl] = useState('');
   
   const loadedAddressRef = useRef<string>('');
   const isLoadingRef = useRef(false);
@@ -212,19 +210,13 @@ export default function AdminPage() {
     }
 
     try {
-      let metadataCell;
-      
-      if (useOffchainUrl && offchainUrl) {
-        metadataCell = buildOffchainMetadataCell(offchainUrl);
-      } else {
-        metadataCell = buildOnchainMetadataCell({
-          name: newName,
-          symbol: newSymbol,
-          description: newDescription || undefined,
-          image: newImage || undefined,
-          decimals: newDecimals || '9',
-        });
-      }
+      const metadataCell = buildOnchainMetadataCell({
+        name: newName,
+        symbol: newSymbol,
+        description: newDescription || undefined,
+        image: newImage || undefined,
+        decimals: newDecimals || '9',
+      });
       
       const changeMetadataBody = buildChangeMetadataMessage(metadataCell);
 
@@ -521,57 +513,37 @@ export default function AdminPage() {
 
                       {isAdmin && (
                         <>
-                          <div className="p-4 bg-cook-bg-secondary rounded-xl border border-cook-border">
-                            <label className="flex items-center cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={useOffchainUrl}
-                                onChange={(e) => setUseOffchainUrl(e.target.checked)}
-                                className="mr-2 accent-cook-orange"
-                              />
-                              <span className="text-sm text-cook-text">Use off-chain metadata URL</span>
-                            </label>
+                          <div className="p-4 bg-green-50 rounded-xl border border-green-200 mb-4">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">⛓️</span>
+                              <span className="text-sm text-green-700 font-medium">On-chain metadata (TEP-64)</span>
+                            </div>
                           </div>
 
-                          {useOffchainUrl ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-sm font-medium text-cook-text mb-2">Metadata URL</label>
-                              <input
-                                type="url"
-                                value={offchainUrl}
-                                onChange={(e) => setOffchainUrl(e.target.value)}
-                                placeholder="https://example.com/metadata.json"
-                                className="input-ton"
-                              />
+                              <label className="block text-sm font-medium text-cook-text mb-2">Name</label>
+                              <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} className="input-ton" />
                             </div>
-                          ) : (
-                            <>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                  <label className="block text-sm font-medium text-cook-text mb-2">Name</label>
-                                  <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} className="input-ton" />
-                                </div>
-                                <div>
-                                  <label className="block text-sm font-medium text-cook-text mb-2">Symbol</label>
-                                  <input type="text" value={newSymbol} onChange={(e) => setNewSymbol(e.target.value)} className="input-ton" />
-                                </div>
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-cook-text mb-2">Description</label>
-                                <textarea value={newDescription} onChange={(e) => setNewDescription(e.target.value)} className="input-ton min-h-[80px]" />
-                              </div>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                  <label className="block text-sm font-medium text-cook-text mb-2">Image URL</label>
-                                  <input type="url" value={newImage} onChange={(e) => setNewImage(e.target.value)} className="input-ton" />
-                                </div>
-                                <div>
-                                  <label className="block text-sm font-medium text-cook-text mb-2">Decimals</label>
-                                  <input type="number" value={newDecimals} onChange={(e) => setNewDecimals(e.target.value)} min={0} max={18} className="input-ton" />
-                                </div>
-                              </div>
-                            </>
-                          )}
+                            <div>
+                              <label className="block text-sm font-medium text-cook-text mb-2">Symbol</label>
+                              <input type="text" value={newSymbol} onChange={(e) => setNewSymbol(e.target.value)} className="input-ton" />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-cook-text mb-2">Description</label>
+                            <textarea value={newDescription} onChange={(e) => setNewDescription(e.target.value)} className="input-ton min-h-[80px]" />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-cook-text mb-2">Image URL</label>
+                              <input type="url" value={newImage} onChange={(e) => setNewImage(e.target.value)} className="input-ton" />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-cook-text mb-2">Decimals</label>
+                              <input type="number" value={newDecimals} onChange={(e) => setNewDecimals(e.target.value)} min={0} max={18} className="input-ton" />
+                            </div>
+                          </div>
 
                           <button onClick={handleChangeMetadata} disabled={!connected} className="btn-cook w-full">
                             Update Metadata

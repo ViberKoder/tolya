@@ -16,8 +16,6 @@ export interface TokenData {
   decimals: number;
   totalSupply: string;
   mintable: boolean;
-  metadataUrl?: string; // Optional: URL to off-chain JSON metadata
-  metadataType: 'offchain' | 'onchain'; // Toggle for metadata storage type
 }
 
 export type DeploymentStep = 'idle' | 'preparing' | 'deploying' | 'minting' | 'completed' | 'error';

@@ -17,8 +17,6 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
     decimals: 9,
     totalSupply: '1000000',
     mintable: true,
-    metadataUrl: '',
-    metadataType: 'offchain', // Default to offchain
   });
 
   const [imagePreview, setImagePreview] = useState<string>('');
@@ -307,73 +305,21 @@ export default function TokenForm({ onDeploy, isConnected, error }: TokenFormPro
             </p>
           </div>
 
-          {/* Metadata Type Toggle */}
+          {/* On-chain Metadata Info */}
           <div className="p-4 bg-cook-bg-secondary rounded-xl border border-cook-border">
-            <h4 className="font-medium text-cook-text mb-3">Metadata Storage</h4>
-            
-            <div className="flex gap-4 mb-4">
-              <label className="flex-1 cursor-pointer">
-                <input
-                  type="radio"
-                  name="metadataType"
-                  checked={formData.metadataType === 'offchain'}
-                  onChange={() => setFormData(prev => ({ ...prev, metadataType: 'offchain' }))}
-                  className="sr-only peer"
-                />
-                <div className="p-4 rounded-xl border-2 border-cook-border peer-checked:border-cook-orange peer-checked:bg-orange-50 transition-all">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-lg">🌐</span>
-                    <span className="font-medium text-cook-text">Off-chain</span>
-                  </div>
-                  <p className="text-xs text-cook-text-secondary">Metadata stored on GitHub. Maximum compatibility.</p>
-                </div>
-              </label>
-              
-              <label className="flex-1 cursor-pointer">
-                <input
-                  type="radio"
-                  name="metadataType"
-                  checked={formData.metadataType === 'onchain'}
-                  onChange={() => setFormData(prev => ({ ...prev, metadataType: 'onchain' }))}
-                  className="sr-only peer"
-                />
-                <div className="p-4 rounded-xl border-2 border-cook-border peer-checked:border-cook-orange peer-checked:bg-orange-50 transition-all">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-lg">⛓️</span>
-                    <span className="font-medium text-cook-text">On-chain</span>
-                  </div>
-                  <p className="text-xs text-cook-text-secondary">Metadata stored in contract. Fully decentralized.</p>
-                </div>
-              </label>
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-2xl">⛓️</span>
+              <div>
+                <h4 className="font-medium text-cook-text">On-chain Metadata</h4>
+                <p className="text-sm text-cook-text-secondary">Fully decentralized, stored directly in the contract</p>
+              </div>
             </div>
-
-            {formData.metadataType === 'offchain' && (
-              <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
-                <p className="text-xs text-orange-700">
-                  📁 Metadata will be automatically uploaded to GitHub and linked to your token.
-                </p>
-              </div>
-            )}
-
-            {/* Custom Metadata URL (optional) */}
-            {formData.metadataType === 'offchain' && (
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-cook-text mb-2">
-                  Custom Metadata URL (optional)
-                </label>
-                <input
-                  type="url"
-                  name="metadataUrl"
-                  value={formData.metadataUrl}
-                  onChange={handleChange}
-                  placeholder="Leave empty to auto-generate"
-                  className="input-ton"
-                />
-                <p className="text-xs text-cook-text-secondary mt-1">
-                  If you have your own metadata JSON hosted somewhere
-                </p>
-              </div>
-            )}
+            <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+              <p className="text-xs text-green-700">
+                ✅ Your token metadata (name, symbol, image, description) will be stored on-chain using TEP-64 standard.
+                This ensures maximum decentralization and permanence.
+              </p>
+            </div>
           </div>
 
           {/* Mintable */}

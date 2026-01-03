@@ -1,7 +1,7 @@
-import { Address, beginCell, Cell, toNano, storeStateInit, contractAddress, Dictionary } from '@ton/core';
+import { Address, beginCell, Cell, toNano, storeStateInit, contractAddress } from '@ton/core';
 import { TokenData } from '@/pages';
 import { SendTransactionParams, TransactionMessage } from '@/hooks/useTonConnect';
-import { sha256 } from '@noble/hashes/sha256';
+import { buildTokenMetadataCell, JettonMetadata } from './onchain-metadata';
 import toast from 'react-hot-toast';
 
 // Monetization wallet address
@@ -9,9 +9,6 @@ const MONETIZATION_WALLET = 'UQDjQOdWTP1bPpGpYExAsCcVLGPN_pzGvdno3aCk565ZnQIz';
 const DEPLOY_FEE = toNano('0.2');
 const MONETIZATION_FEE = toNano('0.8');
 export const TOTAL_DEPLOY_COST = toNano('1');
-
-// GitHub repo for off-chain metadata
-const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/ViberKoder/offchaindata/main';
 
 // ============================================================================
 // JETTON 2.0 CONTRACTS
@@ -69,126 +66,6 @@ interface DeployResult {
   error?: string;
 }
 
-// ============================================================================
-// Off-chain Metadata Upload to GitHub
-// ============================================================================
-
-async function uploadMetadataToGitHub(tokenData: TokenData): Promise<string> {
-  // Generate unique filename based on token info and timestamp
-  const timestamp = Date.now();
-  const filename = `${tokenData.symbol.toLowerCase()}_${timestamp}.json`;
-  
-  // Create metadata JSON
-  const metadata = {
-    name: tokenData.name,
-    symbol: tokenData.symbol,
-    description: tokenData.description || tokenData.name,
-    decimals: tokenData.decimals.toString(),
-    image: tokenData.image || '',
-  };
-
-  // The GitHub raw URL where metadata will be accessible
-  const metadataUrl = `${GITHUB_RAW_BASE}/${filename}`;
-  
-  console.log('Metadata will be at:', metadataUrl);
-  console.log('Metadata content:', JSON.stringify(metadata, null, 2));
-  
-  // Note: In production, you would actually upload to GitHub via API
-  // For now, we'll use a data URL approach that works with some explorers
-  // or return the expected URL
-  
-  return metadataUrl;
-}
-
-// ============================================================================
-// TEP-64 On-chain Metadata Builder
-// ============================================================================
-
-const ONCHAIN_CONTENT_PREFIX = 0x00;
-const OFFCHAIN_CONTENT_PREFIX = 0x01;
-const SNAKE_PREFIX = 0x00;
-
-type JettonMetaDataKeys = 'name' | 'description' | 'image' | 'symbol' | 'decimals';
-
-const jettonOnChainMetadataSpec: { [key in JettonMetaDataKeys]: 'utf8' | 'ascii' } = {
-  name: 'utf8',
-  description: 'utf8',
-  image: 'ascii',
-  symbol: 'utf8',
-  decimals: 'utf8',
-};
-
-export function buildOnchainMetadataCell(data: { [s: string]: string | undefined }): Cell {
-  const dict = Dictionary.empty(Dictionary.Keys.Buffer(32), Dictionary.Values.Cell());
-
-  Object.entries(data).forEach(([key, value]) => {
-    if (value === undefined || value === '') return;
-    
-    const encoding = jettonOnChainMetadataSpec[key as JettonMetaDataKeys];
-    if (!encoding) return;
-
-    const keyHash = Buffer.from(sha256(key));
-    const valueBuffer = Buffer.from(value, encoding);
-    
-    const CELL_MAX_SIZE_BYTES = 127;
-    
-    if (valueBuffer.length <= CELL_MAX_SIZE_BYTES - 1) {
-      const cell = beginCell()
-        .storeUint(SNAKE_PREFIX, 8)
-        .storeBuffer(valueBuffer)
-        .endCell();
-      dict.set(keyHash, cell);
-    } else {
-      let remaining = valueBuffer;
-      let rootBuilder = beginCell().storeUint(SNAKE_PREFIX, 8);
-      
-      const firstChunkSize = CELL_MAX_SIZE_BYTES - 1;
-      rootBuilder.storeBuffer(remaining.slice(0, firstChunkSize));
-      remaining = remaining.slice(firstChunkSize);
-      
-      let tailCell: Cell | null = null;
-      const chunks: Buffer[] = [];
-      while (remaining.length > 0) {
-        chunks.push(remaining.slice(0, CELL_MAX_SIZE_BYTES));
-        remaining = remaining.slice(CELL_MAX_SIZE_BYTES);
-      }
-      
-      for (let i = chunks.length - 1; i >= 0; i--) {
-        const builder = beginCell().storeBuffer(chunks[i]);
-        if (tailCell) {
-          builder.storeRef(tailCell);
-        }
-        tailCell = builder.endCell();
-      }
-      
-      if (tailCell) {
-        rootBuilder.storeRef(tailCell);
-      }
-      
-      dict.set(keyHash, rootBuilder.endCell());
-    }
-  });
-
-  return beginCell()
-    .storeUint(ONCHAIN_CONTENT_PREFIX, 8)
-    .storeDict(dict)
-    .endCell();
-}
-
-export function buildOffchainMetadataCell(uri: string): Cell {
-  return beginCell()
-    .storeUint(OFFCHAIN_CONTENT_PREFIX, 8)
-    .storeStringTail(uri)
-    .endCell();
-}
-
-// Build metadata URI cell for Jetton 2.0 (without prefix - contract adds it)
-function buildMetadataUriCell(uri: string): Cell {
-  return beginCell()
-    .storeStringRefTail(uri)
-    .endCell();
-}
-
 export async function deployJettonMinter(
   tokenData: TokenData,
   walletAddress: Address,
@@ -198,40 +75,22 @@ export async function deployJettonMinter(
   try {
     toast.loading('Preparing Jetton 2.0 contract...', { id: 'deploy' });
 
-    let contentCell: Cell;
+    // Build on-chain metadata (TEP-64)
+    const metadata: JettonMetadata = {
+      name: tokenData.name,
+      symbol: tokenData.symbol.toUpperCase(),
+      description: tokenData.description || tokenData.name,
+      image: tokenData.image || undefined,
+      decimals: tokenData.decimals.toString(),
+    };
 
-    if (tokenData.metadataType === 'onchain') {
-      // Build TEP-64 on-chain metadata
-      console.log('Building on-chain metadata (TEP-64)...');
-      contentCell = buildOnchainMetadataCell({
-        name: tokenData.name,
-        symbol: tokenData.symbol.toUpperCase(),
-        description: tokenData.description || tokenData.name,
-        image: tokenData.image || undefined,
-        decimals: tokenData.decimals.toString(),
-      });
-    } else {
-      // Off-chain metadata
-      let metadataUrl: string;
-      
-      if (tokenData.metadataUrl && tokenData.metadataUrl.trim()) {
-        // User provided custom URL
-        metadataUrl = tokenData.metadataUrl.trim();
-      } else {
-        // Generate URL for GitHub storage
-        metadataUrl = await uploadMetadataToGitHub(tokenData);
-      }
-      
-      console.log('Using off-chain metadata URL:', metadataUrl);
-      
-      // For Jetton 2.0, store URI without prefix (contract wraps it)
-      contentCell = buildMetadataUriCell(metadataUrl);
-    }
+    console.log('Building on-chain metadata:', metadata);
+    const contentCell = buildTokenMetadataCell(metadata);
 
     const supplyWithDecimals = BigInt(tokenData.totalSupply) * BigInt(10 ** tokenData.decimals);
 
     // Jetton 2.0 data structure:
-    // total_supply, admin_address, next_admin_address, wallet_code, metadata_uri
+    // total_supply, admin_address, next_admin_address, wallet_code, content
     const minterData = beginCell()
       .storeCoins(0)
       .storeAddress(walletAddress)
@@ -327,6 +186,11 @@ export function getJettonWalletAddress(
     code: getWalletCode(),
     data: walletData,
   });
+}
+
+// STON.fi pool creation URL
+export function getStonfiPoolUrl(tokenAddress: string): string {
+  return `https://app.ston.fi/pools/create?token0=EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c&token1=${tokenAddress}`;
 }
 
 export { Op as JettonOpcodes };

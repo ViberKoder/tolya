@@ -1,90 +1,133 @@
-import { beginCell, Cell, Dictionary } from '@ton/core';
-import { sha256 } from '@noble/hashes/sha256';
-
 /**
- * TEP-64 On-chain Metadata Builder
- * Based on https://github.com/ton-blockchain/minter-contract
- * Format: 0x00 + Dictionary<SHA256(key), Cell(0x00 + snake_data)>
+ * On-chain metadata builder for Jetton 2.0
+ * Based on https://github.com/ton-blockchain/minter-contract/blob/main/build/jetton-minter.deploy.ts
+ * 
+ * Uses TEP-64 standard:
+ * - Prefix 0x00 for on-chain data
+ * - SHA-256 hashed keys
+ * - Snake format for values (chain of refs for long data)
  */
+
+import { beginCell, Cell, Dictionary, Slice } from '@ton/core';
+import { Sha256 } from '@aws-crypto/sha256-js';
 
 const ONCHAIN_CONTENT_PREFIX = 0x00;
-const OFFCHAIN_CONTENT_PREFIX = 0x01;
 const SNAKE_PREFIX = 0x00;
 
-export type JettonMetaDataKeys = 'name' | 'description' | 'image' | 'symbol' | 'decimals';
+// Standard Jetton metadata keys
+export type JettonMetadataKeys = 'name' | 'description' | 'image' | 'symbol' | 'decimals';
 
-const jettonOnChainMetadataSpec: {
-  [key in JettonMetaDataKeys]: 'utf8' | 'ascii';
-} = {
-  name: 'utf8',
-  description: 'utf8',
-  image: 'ascii',
-  symbol: 'utf8',
-  decimals: 'utf8',
-};
+// SHA256 hash function
+function sha256(str: string): Buffer {
+  const hash = new Sha256();
+  hash.update(str);
+  return Buffer.from(hash.digestSync());
+}
+
+// Convert string to snake format cell
+function makeSnakeCell(data: Buffer): Cell {
+  const CELL_MAX_SIZE_BYTES = 127;
+  
+  const chunks: Buffer[] = [];
+  let remaining = data;
+  
+  while (remaining.length > 0) {
+    chunks.push(remaining.slice(0, CELL_MAX_SIZE_BYTES));
+    remaining = remaining.slice(CELL_MAX_SIZE_BYTES);
+  }
+  
+  // Build from the end
+  let currentCell: Cell | null = null;
+  
+  for (let i = chunks.length - 1; i >= 0; i--) {
+    const builder = beginCell();
+    
+    if (i === 0) {
+      // First chunk - add snake prefix
+      builder.storeUint(SNAKE_PREFIX, 8);
+    }
+    
+    builder.storeBuffer(chunks[i]);
+    
+    if (currentCell) {
+      builder.storeRef(currentCell);
+    }
+    
+    currentCell = builder.endCell();
+  }
+  
+  return currentCell || beginCell().storeUint(SNAKE_PREFIX, 8).endCell();
+}
+
+// Parse snake cell back to buffer
+function parseSnakeCell(cell: Cell): Buffer {
+  let slice = cell.beginParse();
+  
+  // Skip snake prefix if present
+  if (slice.remainingBits >= 8) {
+    const prefix = slice.loadUint(8);
+    if (prefix !== SNAKE_PREFIX) {
+      throw new Error('Invalid snake cell prefix');
+    }
+  }
+  
+  const chunks: Buffer[] = [];
+  
+  while (true) {
+    const bits = slice.remainingBits;
+    if (bits > 0) {
+      chunks.push(slice.loadBuffer(bits / 8));
+    }
+    
+    if (slice.remainingRefs === 0) {
+      break;
+    }
+    
+    slice = slice.loadRef().beginParse();
+  }
+  
+  return Buffer.concat(chunks);
+}
+
+export interface JettonMetadata {
+  name: string;
+  symbol: string;
+  description?: string;
+  image?: string;
+  decimals?: string;
+}
 
 /**
- * Build TEP-64 on-chain metadata cell
- * Matches minter-contract format exactly
+ * Build on-chain metadata cell for Jetton 2.0
+ * 
+ * @param metadata - Token metadata object
+ * @returns Cell with TEP-64 on-chain metadata
  */
-export function buildOnchainMetadataCell(data: { [s: string]: string | undefined }): Cell {
-  const dict = Dictionary.empty(Dictionary.Keys.Buffer(32), Dictionary.Values.Cell());
-
-  Object.entries(data).forEach(([key, value]) => {
-    if (value === undefined || value === '') return;
+export function buildTokenMetadataCell(metadata: JettonMetadata): Cell {
+  const dict = Dictionary.empty(
+    Dictionary.Keys.Buffer(32),
+    Dictionary.Values.Cell()
+  );
+  
+  // Standard keys mapping
+  const entries: [JettonMetadataKeys, string | undefined][] = [
+    ['name', metadata.name],
+    ['symbol', metadata.symbol],
+    ['description', metadata.description],
+    ['image', metadata.image],
+    ['decimals', metadata.decimals || '9'],
+  ];
+  
+  for (const [key, value] of entries) {
+    if (value === undefined || value === '') continue;
     
-    const encoding = jettonOnChainMetadataSpec[key as JettonMetaDataKeys];
-    if (!encoding) return;
-
-    // SHA256 hash of the key
-    const keyHash = Buffer.from(sha256(key));
+    const keyHash = sha256(key);
+    const valueBuffer = Buffer.from(value, 'utf-8');
+    const valueCell = makeSnakeCell(valueBuffer);
     
-    // Encode value
-    const valueBuffer = Buffer.from(value, encoding);
-    
-    // Build value cell with snake format (0x00 prefix + data)
-    const CELL_MAX_SIZE_BYTES = 127;
-    
-    if (valueBuffer.length <= CELL_MAX_SIZE_BYTES - 1) {
-      // Single cell
-      const cell = beginCell()
-        .storeUint(SNAKE_PREFIX, 8)
-        .storeBuffer(valueBuffer)
-        .endCell();
-      dict.set(keyHash, cell);
-    } else {
-      // Multi-cell snake format
-      let remaining = valueBuffer;
-      let rootBuilder = beginCell().storeUint(SNAKE_PREFIX, 8);
-      
-      const firstChunkSize = CELL_MAX_SIZE_BYTES - 1;
-      rootBuilder.storeBuffer(remaining.slice(0, firstChunkSize));
-      remaining = remaining.slice(firstChunkSize);
-      
-      let tailCell: Cell | null = null;
-      const chunks: Buffer[] = [];
-      while (remaining.length > 0) {
-        chunks.push(remaining.slice(0, CELL_MAX_SIZE_BYTES));
-        remaining = remaining.slice(CELL_MAX_SIZE_BYTES);
-      }
-      
-      for (let i = chunks.length - 1; i >= 0; i--) {
-        const builder = beginCell().storeBuffer(chunks[i]);
-        if (tailCell) {
-          builder.storeRef(tailCell);
-        }
-        tailCell = builder.endCell();
-      }
-      
-      if (tailCell) {
-        rootBuilder.storeRef(tailCell);
-      }
-      
-      dict.set(keyHash, rootBuilder.endCell());
-    }
-  });
-
-  // Final cell: 0x00 prefix + dictionary
+    dict.set(keyHash, valueCell);
+  }
+  
   return beginCell()
     .storeUint(ONCHAIN_CONTENT_PREFIX, 8)
     .storeDict(dict)
@@ -92,23 +135,55 @@ export function buildOnchainMetadataCell(data: { [s: string]: string | undefined
 }
 
 /**
- * Build off-chain metadata cell (URL)
+ * Parse on-chain metadata cell back to metadata object
+ * 
+ * @param cell - Cell with TEP-64 on-chain metadata
+ * @returns Parsed metadata object
  */
-export function buildOffchainMetadataCell(uri: string): Cell {
+export function parseTokenMetadataCell(cell: Cell): Partial<JettonMetadata> {
+  const slice = cell.beginParse();
+  
+  const prefix = slice.loadUint(8);
+  if (prefix !== ONCHAIN_CONTENT_PREFIX) {
+    throw new Error('Not an on-chain metadata cell');
+  }
+  
+  const dict = slice.loadDict(
+    Dictionary.Keys.Buffer(32),
+    Dictionary.Values.Cell()
+  );
+  
+  const result: Partial<JettonMetadata> = {};
+  
+  const keys: JettonMetadataKeys[] = ['name', 'symbol', 'description', 'image', 'decimals'];
+  
+  for (const key of keys) {
+    const keyHash = sha256(key);
+    const valueCell = dict.get(keyHash);
+    
+    if (valueCell) {
+      try {
+        const valueBuffer = parseSnakeCell(valueCell);
+        result[key] = valueBuffer.toString('utf-8');
+      } catch (e) {
+        // Skip invalid values
+      }
+    }
+  }
+  
+  return result;
+}
+
+// Alias for backward compatibility
+export const buildOnchainMetadataCell = buildTokenMetadataCell;
+
+// Build change metadata message (opcode 4 = change_content)
+export function buildChangeMetadataMessage(contentCell: Cell): Cell {
   return beginCell()
-    .storeUint(OFFCHAIN_CONTENT_PREFIX, 8)
-    .storeStringTail(uri)
+    .storeUint(0xcb862902, 32) // change_metadata_url opcode
+    .storeUint(0, 64) // query_id
+    .storeRef(contentCell)
     .endCell();
 }
 
-/**
- * Build message body for changing content (opcode 4)
- * For Jetton 2.0 with on-chain metadata support
- */
-export function buildChangeMetadataMessage(newMetadataCell: Cell): Cell {
-  return beginCell()
-    .storeUint(4, 32) // op::change_content
-    .storeUint(0, 64) // query_id
-    .storeRef(newMetadataCell)
-    .endCell();
-}
+export { sha256, makeSnakeCell, parseSnakeCell };
